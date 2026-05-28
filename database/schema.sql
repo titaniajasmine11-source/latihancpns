@@ -178,6 +178,19 @@ alter table question_drafts enable row level security;
 alter table ai_generation_logs enable row level security;
 alter table app_settings enable row level security;
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.role = 'admin'
+  );
+$$;
+
 drop policy if exists "Users can read their profile" on profiles;
 create policy "Users can read their profile" on profiles for select using (auth.uid() = id);
 drop policy if exists "Users can update their profile" on profiles;
@@ -189,10 +202,14 @@ drop policy if exists "Authenticated users can read topics" on topics;
 create policy "Authenticated users can read topics" on topics for select to authenticated using (true);
 drop policy if exists "Authenticated users can read published questions" on questions;
 create policy "Authenticated users can read published questions" on questions for select to authenticated using (status = 'published');
+drop policy if exists "Admins can manage questions" on questions;
+create policy "Admins can manage questions" on questions for all using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Authenticated users can read published options" on question_options;
 create policy "Authenticated users can read published options" on question_options for select to authenticated using (
   exists (select 1 from questions where questions.id = question_options.question_id and questions.status = 'published')
 );
+drop policy if exists "Admins can manage question options" on question_options;
+create policy "Admins can manage question options" on question_options for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "Users can manage own sessions" on practice_sessions;
 create policy "Users can manage own sessions" on practice_sessions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -213,6 +230,12 @@ drop policy if exists "Users can create generation jobs" on generation_jobs;
 create policy "Users can create generation jobs" on generation_jobs for insert to authenticated with check (auth.uid() = created_by);
 drop policy if exists "Users can read own generation jobs" on generation_jobs;
 create policy "Users can read own generation jobs" on generation_jobs for select using (auth.uid() = created_by);
+drop policy if exists "Admins can read generation settings" on generation_settings;
+create policy "Admins can read generation settings" on generation_settings for select using (public.is_admin());
+drop policy if exists "Admins can manage question drafts" on question_drafts;
+create policy "Admins can manage question drafts" on question_drafts for all using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Admins can read AI logs" on ai_generation_logs;
+create policy "Admins can read AI logs" on ai_generation_logs for select using (public.is_admin());
 
 create or replace function public.handle_new_user()
 returns trigger
