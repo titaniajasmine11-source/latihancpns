@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, BookOpenCheck, CircleAlert, Layers3 } from "lucide-react";
-import { startPractice } from "@/app/latihan/actions";
+import { ArrowLeft, BookOpenCheck, CircleAlert, ClipboardCheck, Layers3 } from "lucide-react";
+import { startExam, startPractice } from "@/app/latihan/actions";
 import { createClient } from "@/lib/supabase/server";
 
 type Category = {
@@ -21,7 +21,8 @@ type QuestionStock = {
   topic_id: number;
 };
 
-export default async function PracticePickerPage() {
+export default async function PracticePickerPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
+  const { message } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -68,6 +69,29 @@ export default async function PracticePickerPage() {
             </div>
           </div>
         </header>
+
+        {message ? (
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+            {message}
+          </div>
+        ) : null}
+
+        <section className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-emerald-200">Mode ujian</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">Simulasi CPNS campuran</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                Ambil soal published dari TWK, TIU, dan TKP secara acak. Cocok untuk latihan rasa ujian tanpa memilih topik satu per satu.
+              </p>
+            </div>
+            <form action={startExam}>
+              <button className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300 sm:w-auto">
+                <ClipboardCheck className="size-5" /> Mulai Simulasi
+              </button>
+            </form>
+          </div>
+        </section>
 
         <div className="grid gap-5">
           {((categories ?? []) as Category[]).map((category) => (

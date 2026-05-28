@@ -94,7 +94,7 @@ export default async function PracticeSessionPage({ params }: { params: Promise<
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-slate-600">
-                {category?.code} - {topic?.name}
+                {category?.code && topic?.name ? `${category.code} - ${topic.name}` : "Simulasi ujian campuran"}
               </p>
               <h1 className="text-2xl font-black">Latihan berlangsung</h1>
             </div>

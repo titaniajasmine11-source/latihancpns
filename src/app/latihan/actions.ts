@@ -4,6 +4,22 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+const examCategoryTargets = new Map([
+  ["TWK", 5],
+  ["TIU", 5],
+  ["TKP", 5],
+]);
+
+type ExamQuestion = {
+  id: number;
+  category_id: number;
+  categories: { code: string } | { code: string }[] | null;
+};
+
+function shuffle<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
 export async function startPractice(formData: FormData) {
   const topicId = Number(formData.get("topic_id"));
   const questionCount = Number(formData.get("question_count") ?? 10);
@@ -64,6 +80,72 @@ export async function startPractice(formData: FormData) {
 
   if (sessionQuestionsError) {
     redirect("/latihan?message=Gagal menyiapkan soal latihan");
+  }
+
+  redirect(`/latihan/${session.id}`);
+}
+
+export async function startExam() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: questions, error: questionsError } = await supabase
+    .from("questions")
+    .select("id, category_id, categories(code)")
+    .eq("status", "published");
+
+  if (questionsError || !questions?.length) {
+    redirect("/latihan?message=Belum ada soal published untuk simulasi ujian");
+  }
+
+  const selectedQuestions: ExamQuestion[] = [];
+
+  for (const [categoryCode, target] of examCategoryTargets) {
+    const categoryQuestions = ((questions ?? []) as ExamQuestion[]).filter((question) => {
+      const category = Array.isArray(question.categories) ? question.categories[0] : question.categories;
+      return category?.code === categoryCode;
+    });
+
+    selectedQuestions.push(...shuffle(categoryQuestions).slice(0, target));
+  }
+
+  if (selectedQuestions.length < 3) {
+    redirect("/latihan?message=Stok soal simulasi belum cukup. Tambahkan soal TWK, TIU, dan TKP terlebih dahulu");
+  }
+
+  const { data: session, error: sessionError } = await supabase
+    .from("practice_sessions")
+    .insert({
+      user_id: user.id,
+      category_id: null,
+      topic_id: null,
+      total_questions: selectedQuestions.length,
+    })
+    .select("id")
+    .single();
+
+  if (sessionError || !session) {
+    redirect("/latihan?message=Gagal membuat simulasi ujian");
+  }
+
+  const sessionQuestions = shuffle(selectedQuestions).map((question, index) => ({
+    session_id: session.id,
+    question_id: question.id,
+    position: index + 1,
+  }));
+
+  const { error: sessionQuestionsError } = await supabase
+    .from("session_questions")
+    .insert(sessionQuestions);
+
+  if (sessionQuestionsError) {
+    redirect("/latihan?message=Gagal menyiapkan simulasi ujian");
   }
 
   redirect(`/latihan/${session.id}`);

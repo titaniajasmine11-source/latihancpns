@@ -10,6 +10,11 @@ type SessionQuestion = {
     id: number;
     question_text: string;
     explanation: string | null;
+    categories: {
+      code: string;
+    } | {
+      code: string;
+    }[] | null;
     question_options: {
       id: number;
       label: string;
@@ -22,6 +27,11 @@ type SessionQuestion = {
         id: number;
         question_text: string;
         explanation: string | null;
+        categories: {
+          code: string;
+        } | {
+          code: string;
+        }[] | null;
         question_options: {
           id: number;
           label: string;
@@ -67,7 +77,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
   const [{ data: sessionQuestions }, { data: answers }] = await Promise.all([
     supabase
       .from("session_questions")
-      .select("position, questions(id, question_text, explanation, question_options(id, label, option_text, is_correct, score))")
+      .select("position, questions(id, question_text, explanation, categories(code), question_options(id, label, option_text, is_correct, score))")
       .eq("session_id", sessionId)
       .order("position", { ascending: true }),
     supabase
@@ -84,6 +94,27 @@ export default async function ResultPage({ params }: { params: Promise<{ session
 
   const category = Array.isArray(session.categories) ? session.categories[0] : session.categories;
   const topic = Array.isArray(session.topics) ? session.topics[0] : session.topics;
+  const breakdown = new Map<string, { score: number; answered: number; total: number }>();
+
+  ((sessionQuestions ?? []) as SessionQuestion[]).forEach((item) => {
+    const question = Array.isArray(item.questions) ? item.questions[0] : item.questions;
+    const questionCategory = Array.isArray(question.categories) ? question.categories[0] : question.categories;
+    const code = questionCategory?.code ?? "CPNS";
+    const answer = answerByQuestion.get(question.id);
+    const current = breakdown.get(code) ?? { score: 0, answered: 0, total: 0 };
+
+    breakdown.set(code, {
+      score: current.score + (answer?.score ?? 0),
+      answered: current.answered + (answer ? 1 : 0),
+      total: current.total + 1,
+    });
+  });
+
+  const passingGrades = new Map([
+    ["TWK", 65],
+    ["TIU", 80],
+    ["TKP", 166],
+  ]);
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
@@ -95,7 +126,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
           <div className="mt-6 flex items-end justify-between gap-5">
             <div>
               <p className="text-sm font-semibold text-slate-300">
-                {category?.code} - {topic?.name}
+                {category?.code && topic?.name ? `${category.code} - ${topic.name}` : "Simulasi ujian campuran"}
               </p>
               <h1 className="mt-2 text-4xl font-black">Skor {session.total_score}</h1>
               <p className="mt-2 text-slate-300">{answerByQuestion.size} dari {session.total_questions} soal dijawab.</p>
@@ -106,8 +137,34 @@ export default async function ResultPage({ params }: { params: Promise<{ session
           </div>
         </header>
 
+        <section className="grid gap-3 sm:grid-cols-3">
+          {Array.from(breakdown.entries()).map(([code, item]) => {
+            const passingGrade = passingGrades.get(code);
+            const status = passingGrade ? (item.score >= passingGrade ? "Lulus ambang" : "Belum lulus") : null;
+
+            return (
+              <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm" key={code}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">{code}</span>
+                  <span className="text-sm font-bold text-slate-500">{item.answered}/{item.total}</span>
+                </div>
+                <p className="mt-4 text-3xl font-black">{item.score}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  {passingGrade ? `Ambang simulasi: ${passingGrade}` : "Skor kategori"}
+                </p>
+                {status ? (
+                  <p className={`mt-3 rounded-2xl px-3 py-2 text-sm font-black ${item.score >= (passingGrade ?? 0) ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+                    {status}
+                  </p>
+                ) : null}
+              </article>
+            );
+          })}
+        </section>
+
         {((sessionQuestions ?? []) as SessionQuestion[]).map((item) => {
           const question = Array.isArray(item.questions) ? item.questions[0] : item.questions;
+          const questionCategory = Array.isArray(question.categories) ? question.categories[0] : question.categories;
           const answer = answerByQuestion.get(question.id);
           const selectedOption = question.question_options.find((option) => option.id === answer?.selected_option_id);
 
@@ -115,7 +172,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
             <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" key={question.id}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <span className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
-                  Soal {item.position}
+                  {questionCategory?.code ?? "CPNS"} - Soal {item.position}
                 </span>
                 <span className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">
                   +{answer?.score ?? 0}
