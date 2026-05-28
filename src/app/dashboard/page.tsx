@@ -1,0 +1,68 @@
+import { redirect } from "next/navigation";
+import { BookOpenCheck, Clock3, LogOut, Target } from "lucide-react";
+import { logout } from "@/app/auth/actions";
+import { createClient } from "@/lib/supabase/server";
+
+const quickStats = [
+  { label: "Sesi selesai", value: "0", icon: Clock3 },
+  { label: "Skor rata-rata", value: "-", icon: Target },
+  { label: "Topik aktif", value: "27", icon: BookOpenCheck },
+];
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const fullName = user.user_metadata.full_name ?? user.email;
+
+  return (
+    <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <header className="flex items-center justify-between rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
+            <h1 className="mt-1 text-xl font-black sm:text-2xl">Halo, {fullName}</h1>
+          </div>
+          <form action={logout}>
+            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold hover:border-slate-400">
+              <LogOut className="size-4" /> Keluar
+            </button>
+          </form>
+        </header>
+
+        <section className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
+          <p className="text-sm font-semibold text-emerald-200">Latihan berikutnya</p>
+          <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
+            Pilih kategori dan mulai sesi 10 soal pertama Anda.
+          </h2>
+          <p className="mt-4 max-w-2xl leading-7 text-slate-300">
+            Tahap berikutnya akan menghubungkan dashboard ini ke kategori, topik, bank soal,
+            sesi latihan, dan hasil skor otomatis.
+          </p>
+          <button className="mt-6 rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+            Mulai Latihan
+          </button>
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          {quickStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" key={stat.label}>
+                <Icon className="mb-5 size-6 text-emerald-700" />
+                <p className="text-3xl font-black">{stat.value}</p>
+                <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
+              </article>
+            );
+          })}
+        </section>
+      </section>
+    </main>
+  );
+}
