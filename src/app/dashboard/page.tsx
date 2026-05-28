@@ -59,9 +59,14 @@ export default async function DashboardPage() {
             Tahap berikutnya akan menghubungkan dashboard ini ke kategori, topik, bank soal,
             sesi latihan, dan hasil skor otomatis.
           </p>
-          <Link href="/latihan" className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
-            Mulai Latihan
-          </Link>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link href="/latihan" className="inline-flex justify-center rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+              Mulai Latihan
+            </Link>
+            <Link href="/riwayat" className="inline-flex justify-center rounded-2xl border border-white/20 px-5 py-4 font-black text-white hover:bg-white/10">
+              Lihat Riwayat
+            </Link>
+          </div>
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3">
