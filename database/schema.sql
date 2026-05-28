@@ -102,7 +102,8 @@ create table if not exists score_results (
   correct_count int,
   wrong_count int,
   total_score int,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique(session_id)
 );
 
 create table if not exists generation_settings (
@@ -223,8 +224,21 @@ create policy "Users can read own session questions" on session_questions for se
       and practice_sessions.user_id = auth.uid()
   )
 );
+drop policy if exists "Users can create own session questions" on session_questions;
+create policy "Users can create own session questions" on session_questions for insert with check (
+  exists (
+    select 1 from practice_sessions
+    where practice_sessions.id = session_questions.session_id
+      and practice_sessions.user_id = auth.uid()
+      and practice_sessions.status = 'ongoing'
+  )
+);
 drop policy if exists "Users can read own scores" on score_results;
 create policy "Users can read own scores" on score_results for select using (auth.uid() = user_id);
+drop policy if exists "Users can create own scores" on score_results;
+create policy "Users can create own scores" on score_results for insert with check (auth.uid() = user_id);
+drop policy if exists "Users can update own scores" on score_results;
+create policy "Users can update own scores" on score_results for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "Users can create generation jobs" on generation_jobs;
 create policy "Users can create generation jobs" on generation_jobs for insert to authenticated with check (auth.uid() = created_by);

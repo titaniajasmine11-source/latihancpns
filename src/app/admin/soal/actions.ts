@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 
 const optionLabels = ["A", "B", "C", "D", "E"] as const;
 const reviewStatuses = new Set(["draft", "approved", "published", "rejected", "archived"]);
+const difficulties = new Set(["mudah", "sedang", "sulit"]);
 
 export async function createManualQuestion(formData: FormData) {
   const { supabase, user } = await requireAdmin();
@@ -17,7 +18,7 @@ export async function createManualQuestion(formData: FormData) {
   const explanation = String(formData.get("explanation") ?? "").trim();
   const answerLabel = String(formData.get("answer_label") ?? "A");
 
-  if (!categoryId || !topicId || !questionText || !explanation) {
+  if (!categoryId || !topicId || !questionText || !explanation || !reviewStatuses.has(status) || !difficulties.has(difficulty)) {
     redirect("/admin/soal?message=Lengkapi kategori, topik, soal, dan pembahasan");
   }
 
@@ -26,6 +27,27 @@ export async function createManualQuestion(formData: FormData) {
     .select("code")
     .eq("id", categoryId)
     .single();
+
+  const isTkp = category?.code === "TKP";
+  const options = optionLabels.map((label) => {
+    const optionText = String(formData.get(`option_${label.toLowerCase()}`) ?? "").trim();
+    const tkpScore = Number(formData.get(`score_${label.toLowerCase()}`) ?? 0);
+
+    return {
+      label,
+      option_text: optionText,
+      is_correct: label === answerLabel,
+      score: isTkp ? tkpScore : label === answerLabel ? 5 : 0,
+    };
+  });
+
+  if (!optionLabels.includes(answerLabel as (typeof optionLabels)[number]) || options.some((option) => !option.option_text)) {
+    redirect("/admin/soal?message=Semua opsi A sampai E wajib diisi");
+  }
+
+  if (isTkp && options.some((option) => option.score < 1 || option.score > 5)) {
+    redirect("/admin/soal?message=Skor TKP harus bernilai 1 sampai 5");
+  }
 
   const { data: question, error: questionError } = await supabase
     .from("questions")
@@ -50,25 +72,9 @@ export async function createManualQuestion(formData: FormData) {
     redirect("/admin/soal?message=Gagal menyimpan soal");
   }
 
-  const options = optionLabels.map((label) => {
-    const optionText = String(formData.get(`option_${label.toLowerCase()}`) ?? "").trim();
-    const tkpScore = Number(formData.get(`score_${label.toLowerCase()}`) ?? 0);
-    const isTkp = category?.code === "TKP";
-
-    return {
-      question_id: question.id,
-      label,
-      option_text: optionText,
-      is_correct: isTkp ? label === answerLabel : label === answerLabel,
-      score: isTkp ? tkpScore : label === answerLabel ? 5 : 0,
-    };
-  });
-
-  if (options.some((option) => !option.option_text)) {
-    redirect("/admin/soal?message=Semua opsi A sampai E wajib diisi");
-  }
-
-  const { error: optionsError } = await supabase.from("question_options").insert(options);
+  const { error: optionsError } = await supabase.from("question_options").insert(
+    options.map((option) => ({ ...option, question_id: question.id })),
+  );
 
   if (optionsError) {
     redirect("/admin/soal?message=Soal tersimpan tapi opsi gagal dibuat");
@@ -119,7 +125,7 @@ export async function updateQuestion(formData: FormData) {
   const explanation = String(formData.get("explanation") ?? "").trim();
   const answerLabel = String(formData.get("answer_label") ?? "A");
 
-  if (!questionId || !categoryId || !topicId || !questionText || !explanation || !reviewStatuses.has(status)) {
+  if (!questionId || !categoryId || !topicId || !questionText || !explanation || !reviewStatuses.has(status) || !difficulties.has(difficulty)) {
     redirect(`/admin/soal/${questionId}?message=Data soal belum lengkap`);
   }
 
@@ -151,6 +157,10 @@ export async function updateQuestion(formData: FormData) {
 
   const isTkp = category?.code === "TKP";
 
+  if (!optionLabels.includes(answerLabel as (typeof optionLabels)[number])) {
+    redirect(`/admin/soal/${questionId}?message=Jawaban benar tidak valid`);
+  }
+
   for (const label of optionLabels) {
     const optionId = Number(formData.get(`option_id_${label.toLowerCase()}`));
     const optionText = String(formData.get(`option_${label.toLowerCase()}`) ?? "").trim();
@@ -158,6 +168,10 @@ export async function updateQuestion(formData: FormData) {
 
     if (!optionId || !optionText) {
       redirect(`/admin/soal/${questionId}?message=Semua opsi wajib diisi`);
+    }
+
+    if (isTkp && (tkpScore < 1 || tkpScore > 5)) {
+      redirect(`/admin/soal/${questionId}?message=Skor TKP harus bernilai 1 sampai 5`);
     }
 
     const { error: optionError } = await supabase

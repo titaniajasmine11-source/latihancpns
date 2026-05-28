@@ -9,6 +9,8 @@ import {
 } from "@/lib/gemini/questions";
 import { requireAdmin } from "@/lib/admin";
 
+const difficulties = new Set(["mudah", "sedang", "sulit"]);
+
 export async function generateQuestionDrafts(formData: FormData) {
   const { supabase, user } = await requireAdmin();
   const categoryId = Number(formData.get("category_id"));
@@ -16,16 +18,16 @@ export async function generateQuestionDrafts(formData: FormData) {
   const difficulty = String(formData.get("difficulty") ?? "sedang");
   const requestedCount = Math.min(Number(formData.get("requested_count") ?? 3), 5);
 
-  if (!categoryId || !topicId || requestedCount < 1) {
+  if (!categoryId || !topicId || requestedCount < 1 || !difficulties.has(difficulty)) {
     redirect("/admin/generator?message=Payload generator tidak valid");
   }
 
   const [{ data: category }, { data: topic }] = await Promise.all([
     supabase.from("categories").select("id, code, name").eq("id", categoryId).single(),
-    supabase.from("topics").select("id, name").eq("id", topicId).single(),
+    supabase.from("topics").select("id, name, category_id").eq("id", topicId).single(),
   ]);
 
-  if (!category || !topic) {
+  if (!category || !topic || topic.category_id !== category.id) {
     redirect("/admin/generator?message=Kategori atau topik tidak ditemukan");
   }
 

@@ -82,6 +82,19 @@ export async function saveAnswer(formData: FormData) {
     redirect("/login");
   }
 
+  const { data: sessionQuestion } = await supabase
+    .from("session_questions")
+    .select("id, practice_sessions!inner(id, status)")
+    .eq("session_id", sessionId)
+    .eq("question_id", questionId)
+    .eq("practice_sessions.user_id", user.id)
+    .eq("practice_sessions.status", "ongoing")
+    .maybeSingle();
+
+  if (!sessionQuestion) {
+    redirect(`/latihan/${sessionId}?message=Sesi atau soal tidak valid`);
+  }
+
   const { data: option, error: optionError } = await supabase
     .from("question_options")
     .select("id, score")
@@ -134,6 +147,10 @@ export async function finishPractice(formData: FormData) {
     redirect("/dashboard");
   }
 
+  if (session.status === "finished") {
+    redirect(`/hasil/${sessionId}`);
+  }
+
   const { data: answers, error: answersError } = await supabase
     .from("user_answers")
     .select("score, question_options(is_correct)")
@@ -153,23 +170,35 @@ export async function finishPractice(formData: FormData) {
   }).length;
   const answeredQuestions = answers?.length ?? 0;
 
-  await supabase
+  const { error: sessionUpdateError } = await supabase
     .from("practice_sessions")
     .update({ status: "finished", total_score: totalScore, finished_at: new Date().toISOString() })
     .eq("id", sessionId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("status", "ongoing");
 
-  await supabase.from("score_results").insert({
-    session_id: sessionId,
-    user_id: user.id,
-    category_id: session.category_id,
-    topic_id: session.topic_id,
-    total_questions: session.total_questions,
-    answered_questions: answeredQuestions,
-    correct_count: correctCount,
-    wrong_count: Math.max(answeredQuestions - correctCount, 0),
-    total_score: totalScore,
-  });
+  if (sessionUpdateError) {
+    redirect(`/latihan/${sessionId}?message=Gagal menyelesaikan sesi`);
+  }
+
+  const { error: scoreError } = await supabase.from("score_results").upsert(
+    {
+      session_id: sessionId,
+      user_id: user.id,
+      category_id: session.category_id,
+      topic_id: session.topic_id,
+      total_questions: session.total_questions,
+      answered_questions: answeredQuestions,
+      correct_count: correctCount,
+      wrong_count: Math.max(answeredQuestions - correctCount, 0),
+      total_score: totalScore,
+    },
+    { onConflict: "session_id" },
+  );
+
+  if (scoreError) {
+    redirect(`/latihan/${sessionId}?message=Gagal menyimpan skor`);
+  }
 
   revalidatePath("/dashboard");
   redirect(`/hasil/${sessionId}`);
