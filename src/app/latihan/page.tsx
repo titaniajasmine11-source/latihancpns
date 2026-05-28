@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, BookOpenCheck, CircleAlert, ClipboardCheck, Layers3 } from "lucide-react";
-import { startExam, startPractice } from "@/app/latihan/actions";
+import { startPractice } from "@/app/latihan/actions";
 import { createClient } from "@/lib/supabase/server";
 
 type Category = {
@@ -94,11 +94,9 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                 Ambil soal published dari TWK, TIU, dan TKP secara acak. Cocok untuk latihan rasa ujian tanpa memilih topik satu per satu.
               </p>
             </div>
-            <form action={startExam}>
-              <button className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300 sm:w-auto">
+            <Link href="/ujian" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300 sm:w-auto">
                 <ClipboardCheck className="size-5" /> Mulai Simulasi
-              </button>
-            </form>
+            </Link>
           </div>
         </section>
 

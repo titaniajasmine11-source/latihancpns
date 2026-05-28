@@ -123,6 +123,16 @@ export default async function ResultPage({ params }: { params: Promise<{ session
     ["TIU", scoring?.TIU?.passing_grade ?? 80],
     ["TKP", scoring?.TKP?.passing_grade ?? 166],
   ]);
+  const categoryStatuses = Array.from(breakdown.entries()).map(([code, item]) => {
+    const passingGrade = passingGrades.get(code);
+    return {
+      code,
+      score: item.score,
+      passingGrade,
+      passed: passingGrade ? item.score >= passingGrade : true,
+    };
+  });
+  const finalPassed = categoryStatuses.length > 0 && categoryStatuses.every((item) => item.passed);
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
@@ -144,6 +154,16 @@ export default async function ResultPage({ params }: { params: Promise<{ session
             </div>
           </div>
         </header>
+
+        <section className={`rounded-[2rem] border p-5 shadow-sm ${finalPassed ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}>
+          <p className="text-sm font-black uppercase tracking-wide">Status akhir</p>
+          <h2 className="mt-2 text-3xl font-black">{finalPassed ? "Lulus simulasi" : "Belum lulus simulasi"}</h2>
+          <p className="mt-2 text-sm font-semibold leading-6">
+            {finalPassed
+              ? "Semua kategori memenuhi ambang batas yang aktif di settings."
+              : "Minimal satu kategori belum memenuhi ambang batas. Gunakan pembahasan untuk memperbaiki area lemah."}
+          </p>
+        </section>
 
         <section className="grid gap-3 sm:grid-cols-3">
           {Array.from(breakdown.entries()).map(([code, item]) => {

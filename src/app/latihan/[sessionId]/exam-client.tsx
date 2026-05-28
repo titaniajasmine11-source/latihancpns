@@ -54,6 +54,26 @@ export function ExamClient({
     return () => window.clearInterval(interval);
   }, [expiresAt, sessionId]);
 
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const visibilityChange = () => {
+      if (document.hidden) {
+        window.alert("Anda meninggalkan tab ujian. Pastikan kembali sebelum waktu habis.");
+      }
+    };
+
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("visibilitychange", visibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("visibilitychange", visibilityChange);
+    };
+  }, []);
+
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const progress = Math.round((answeredCount / Math.max(questions.length, 1)) * 100);
 
