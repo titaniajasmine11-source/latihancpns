@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export async function login(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
+  const rawEmail = String(formData.get("email") ?? "").trim();
+  const email = rawEmail === "admin" ? "admin@latihancpns.local" : rawEmail;
   const password = String(formData.get("password") ?? "");
   const supabase = await createClient();
 
