@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, PlusCircle } from "lucide-react";
-import { createManualQuestion } from "@/app/admin/soal/actions";
+import { createManualQuestion, updateQuestionStatus } from "@/app/admin/soal/actions";
 import { requireAdmin } from "@/lib/admin";
 
 type Category = {
@@ -149,6 +149,25 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
                   </div>
                   <p className="line-clamp-3 font-bold leading-6">{question.question_text}</p>
                   <p className="mt-2 text-sm text-slate-600">{question.difficulty} - {question.source_type}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white" href={`/admin/soal/${question.id}`}>
+                      Edit
+                    </Link>
+                    {[
+                      ["published", "Publish"],
+                      ["draft", "Draft"],
+                      ["rejected", "Reject"],
+                      ["archived", "Archive"],
+                    ].map(([status, label]) => (
+                      <form action={updateQuestionStatus} key={status}>
+                        <input type="hidden" name="question_id" value={question.id} />
+                        <input type="hidden" name="status" value={status} />
+                        <button className="rounded-2xl bg-white px-3 py-2 text-sm font-black text-slate-700 ring-1 ring-slate-200 hover:ring-slate-400">
+                          {label}
+                        </button>
+                      </form>
+                    ))}
+                  </div>
                 </article>
               );
             })}
