@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, ClipboardList, Settings } from "lucide-react";
+import { ArrowRight, Bot, ClipboardList, FileCheck2, Settings } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 
 const adminMenus = [
@@ -14,6 +14,12 @@ const adminMenus = [
     description: "Buat draft soal Gemini untuk direview sebelum dipublish.",
     href: "/admin/generator",
     icon: Bot,
+  },
+  {
+    title: "Review Draft",
+    description: "Approve atau reject draft soal hasil Gemini.",
+    href: "/admin/draft",
+    icon: FileCheck2,
   },
   {
     title: "Settings",
@@ -39,7 +45,7 @@ export default async function AdminPage() {
           </p>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {adminMenus.map((menu) => {
             const Icon = menu.icon;
             return (
