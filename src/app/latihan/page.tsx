@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, BookOpenCheck, CircleAlert, Layers3 } from "lucide-react";
+import { startPractice } from "@/app/latihan/actions";
 import { createClient } from "@/lib/supabase/server";
 
 type Category = {
@@ -100,16 +101,19 @@ export default async function PracticePickerPage() {
                           <CircleAlert className="size-5 text-amber-600" />
                         )}
                       </div>
-                      <Link
-                        className={`mt-4 inline-flex w-full justify-center rounded-2xl px-4 py-3 text-sm font-black ${
-                          hasStock
-                            ? "bg-emerald-700 text-white hover:bg-emerald-800"
-                            : "bg-white text-slate-500 ring-1 ring-slate-200"
-                        }`}
-                        href={hasStock ? `/latihan/mulai?topic=${topic.id}` : `/latihan?empty=${topic.id}`}
-                      >
-                        {hasStock ? "Mulai topik ini" : "Butuh soal"}
-                      </Link>
+                      {hasStock ? (
+                        <form action={startPractice} className="mt-4">
+                          <input type="hidden" name="topic_id" value={topic.id} />
+                          <input type="hidden" name="question_count" value={Math.min(stock, 10)} />
+                          <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-800">
+                            Mulai topik ini
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="mt-4 inline-flex w-full justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-500 ring-1 ring-slate-200">
+                          Butuh soal
+                        </div>
+                      )}
                     </div>
                   );
                 })}
