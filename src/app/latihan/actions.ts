@@ -16,6 +16,11 @@ type ExamQuestion = {
   categories: { code: string } | { code: string }[] | null;
 };
 
+type PracticeConfig = {
+  exam_category_targets?: Record<string, number>;
+  exam_duration_minutes?: number;
+};
+
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
@@ -59,6 +64,7 @@ export async function startPractice(formData: FormData) {
       user_id: user.id,
       category_id: topic.category_id,
       topic_id: topic.id,
+      mode: "practice",
       total_questions: questions.length,
     })
     .select("id")
@@ -107,8 +113,11 @@ export async function startExam() {
     redirect("/latihan?message=Belum ada soal published untuk simulasi ujian");
   }
 
-  const practiceConfig = practiceSetting?.value as { exam_category_targets?: Record<string, number> } | null;
+  const practiceConfig = practiceSetting?.value as PracticeConfig | null;
   const targetEntries = Object.entries(practiceConfig?.exam_category_targets ?? Object.fromEntries(defaultExamCategoryTargets));
+  const durationMinutes = practiceConfig?.exam_duration_minutes ?? 100;
+  const startedAt = new Date();
+  const expiresAt = new Date(startedAt.getTime() + durationMinutes * 60 * 1000);
   const selectedQuestions: ExamQuestion[] = [];
 
   for (const [categoryCode, target] of targetEntries) {
@@ -130,7 +139,11 @@ export async function startExam() {
       user_id: user.id,
       category_id: null,
       topic_id: null,
+      mode: "exam",
       total_questions: selectedQuestions.length,
+      duration_seconds: durationMinutes * 60,
+      started_at: startedAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
     })
     .select("id")
     .single();
@@ -225,7 +238,7 @@ export async function finishPractice(formData: FormData) {
 
   const { data: session, error: sessionError } = await supabase
     .from("practice_sessions")
-    .select("id, category_id, topic_id, total_questions, status")
+    .select("id, category_id, topic_id, total_questions, status, mode, expires_at")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -237,6 +250,9 @@ export async function finishPractice(formData: FormData) {
   if (session.status === "finished") {
     redirect(`/hasil/${sessionId}`);
   }
+
+  const now = new Date();
+  const expired = session.mode === "exam" && session.expires_at && new Date(session.expires_at) <= now;
 
   const { data: answers, error: answersError } = await supabase
     .from("user_answers")
@@ -259,12 +275,12 @@ export async function finishPractice(formData: FormData) {
 
   const { error: sessionUpdateError } = await supabase
     .from("practice_sessions")
-    .update({ status: "finished", total_score: totalScore, finished_at: new Date().toISOString() })
+    .update({ status: "finished", total_score: totalScore, finished_at: now.toISOString() })
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .eq("status", "ongoing");
 
-  if (sessionUpdateError) {
+  if (sessionUpdateError && !expired) {
     redirect(`/latihan/${sessionId}?message=Gagal menyelesaikan sesi`);
   }
 

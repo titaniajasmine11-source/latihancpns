@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Send } from "lucide-react";
 import { finishPractice, saveAnswer } from "@/app/latihan/actions";
+import { ExamClient } from "@/app/latihan/[sessionId]/exam-client";
 import { createClient } from "@/lib/supabase/server";
 
 type SessionQuestion = {
@@ -31,6 +32,20 @@ type SessionQuestion = {
       }[];
 };
 
+type ExamClientQuestion = {
+  position: number;
+  question: {
+    id: number;
+    question_text: string;
+    question_options: {
+      id: number;
+      label: string;
+      option_text: string;
+      score: number;
+    }[];
+  };
+};
+
 type UserAnswer = {
   question_id: number;
   selected_option_id: number;
@@ -49,7 +64,7 @@ export default async function PracticeSessionPage({ params }: { params: Promise<
 
   const { data: session, error: sessionError } = await supabase
     .from("practice_sessions")
-    .select("id, status, total_questions, categories(code, name), topics(name)")
+    .select("id, mode, status, total_questions, expires_at, categories(code, name), topics(name)")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -83,6 +98,30 @@ export default async function PracticeSessionPage({ params }: { params: Promise<
   const answeredCount = answerByQuestion.size;
   const category = Array.isArray(session.categories) ? session.categories[0] : session.categories;
   const topic = Array.isArray(session.topics) ? session.topics[0] : session.topics;
+
+  if (session.mode === "exam") {
+    const examQuestions = ((sessionQuestions ?? []) as SessionQuestion[]).map((item) => ({
+      position: item.position,
+      question: Array.isArray(item.questions) ? item.questions[0] : item.questions,
+    })) as ExamClientQuestion[];
+    const initialAnswers = Object.fromEntries(answerByQuestion.entries());
+
+    return (
+      <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+        <section className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+          <Link href="/latihan" className="inline-flex w-fit items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm ring-1 ring-slate-200">
+            <ArrowLeft className="size-4" /> Keluar ke latihan
+          </Link>
+          <ExamClient
+            expiresAt={session.expires_at}
+            initialAnswers={initialAnswers}
+            questions={examQuestions}
+            sessionId={sessionId}
+          />
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
