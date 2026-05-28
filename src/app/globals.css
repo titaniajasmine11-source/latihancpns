@@ -17,6 +17,12 @@ body {
   color: var(--foreground);
 }
 
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { RouteMessageToast } from "@/components/route-message-toast";
+import { ToastProvider } from "@/components/toast-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,7 +31,14 @@ export default function RootLayout({
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        {children}
+        <MobileBottomNav />
+        <Suspense fallback={null}>
+          <RouteMessageToast />
+        </Suspense>
+        <ToastProvider />
+      </body>
     </html>
   );
 }

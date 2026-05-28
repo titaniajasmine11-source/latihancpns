@@ -50,7 +50,7 @@ export default async function PracticePickerPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">

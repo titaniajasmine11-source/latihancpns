@@ -85,7 +85,7 @@ export default async function PracticeSessionPage({ params }: { params: Promise<
   const topic = Array.isArray(session.topics) ? session.topics[0] : session.topics;
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         <header className="sticky top-3 z-10 rounded-[2rem] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
           <Link href="/latihan" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">

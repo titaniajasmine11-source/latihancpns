@@ -40,7 +40,7 @@ export default async function AdminGeneratorPage({ searchParams }: { searchParam
   ]);
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
           <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">

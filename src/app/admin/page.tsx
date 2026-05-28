@@ -33,7 +33,7 @@ export default async function AdminPage() {
   await requireAdmin();
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
           <Link href="/dashboard" className="text-sm font-bold text-emerald-200">
