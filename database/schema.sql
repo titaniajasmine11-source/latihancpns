@@ -230,12 +230,16 @@ drop policy if exists "Users can create generation jobs" on generation_jobs;
 create policy "Users can create generation jobs" on generation_jobs for insert to authenticated with check (auth.uid() = created_by);
 drop policy if exists "Users can read own generation jobs" on generation_jobs;
 create policy "Users can read own generation jobs" on generation_jobs for select using (auth.uid() = created_by);
+drop policy if exists "Admins can manage generation jobs" on generation_jobs;
+create policy "Admins can manage generation jobs" on generation_jobs for all using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Admins can read generation settings" on generation_settings;
 create policy "Admins can read generation settings" on generation_settings for select using (public.is_admin());
 drop policy if exists "Admins can manage question drafts" on question_drafts;
 create policy "Admins can manage question drafts" on question_drafts for all using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Admins can read AI logs" on ai_generation_logs;
 create policy "Admins can read AI logs" on ai_generation_logs for select using (public.is_admin());
+drop policy if exists "Admins can create AI logs" on ai_generation_logs;
+create policy "Admins can create AI logs" on ai_generation_logs for insert with check (public.is_admin());
 
 create or replace function public.handle_new_user()
 returns trigger

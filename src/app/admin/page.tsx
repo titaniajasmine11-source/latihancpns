@@ -10,9 +10,9 @@ const adminMenus = [
     icon: ClipboardList,
   },
   {
-    title: "Draft AI",
-    description: "Review soal yang dibuat Gemini sebelum dipublish.",
-    href: "/admin/draft",
+    title: "Generator AI",
+    description: "Buat draft soal Gemini untuk direview sebelum dipublish.",
+    href: "/admin/generator",
     icon: Bot,
   },
   {
