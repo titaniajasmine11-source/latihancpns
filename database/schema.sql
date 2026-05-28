@@ -167,21 +167,32 @@ alter table question_drafts enable row level security;
 alter table ai_generation_logs enable row level security;
 alter table app_settings enable row level security;
 
+drop policy if exists "Users can read their profile" on profiles;
 create policy "Users can read their profile" on profiles for select using (auth.uid() = id);
+drop policy if exists "Users can update their profile" on profiles;
 create policy "Users can update their profile" on profiles for update using (auth.uid() = id);
 
+drop policy if exists "Authenticated users can read categories" on categories;
 create policy "Authenticated users can read categories" on categories for select to authenticated using (true);
+drop policy if exists "Authenticated users can read topics" on topics;
 create policy "Authenticated users can read topics" on topics for select to authenticated using (true);
+drop policy if exists "Authenticated users can read published questions" on questions;
 create policy "Authenticated users can read published questions" on questions for select to authenticated using (status = 'published');
+drop policy if exists "Authenticated users can read published options" on question_options;
 create policy "Authenticated users can read published options" on question_options for select to authenticated using (
   exists (select 1 from questions where questions.id = question_options.question_id and questions.status = 'published')
 );
 
+drop policy if exists "Users can manage own sessions" on practice_sessions;
 create policy "Users can manage own sessions" on practice_sessions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Users can manage own answers" on user_answers;
 create policy "Users can manage own answers" on user_answers for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Users can read own scores" on score_results;
 create policy "Users can read own scores" on score_results for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can create generation jobs" on generation_jobs;
 create policy "Users can create generation jobs" on generation_jobs for insert to authenticated with check (auth.uid() = created_by);
+drop policy if exists "Users can read own generation jobs" on generation_jobs;
 create policy "Users can read own generation jobs" on generation_jobs for select using (auth.uid() = created_by);
 
 create or replace function public.handle_new_user()

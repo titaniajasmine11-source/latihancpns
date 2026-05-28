@@ -1,13 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { BookOpenCheck, Clock3, LogOut, Target } from "lucide-react";
 import { logout } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/server";
-
-const quickStats = [
-  { label: "Sesi selesai", value: "0", icon: Clock3 },
-  { label: "Skor rata-rata", value: "-", icon: Target },
-  { label: "Topik aktif", value: "27", icon: BookOpenCheck },
-];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,6 +15,25 @@ export default async function DashboardPage() {
   }
 
   const fullName = user.user_metadata.full_name ?? user.email;
+  const [sessionsResult, scoresResult, topicsResult] = await Promise.all([
+    supabase
+      .from("practice_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "finished"),
+    supabase.from("score_results").select("total_score").eq("user_id", user.id),
+    supabase.from("topics").select("id", { count: "exact", head: true }).eq("is_active", true),
+  ]);
+
+  const scores = scoresResult.data ?? [];
+  const averageScore = scores.length
+    ? Math.round(scores.reduce((total, score) => total + (score.total_score ?? 0), 0) / scores.length)
+    : null;
+  const quickStats = [
+    { label: "Sesi selesai", value: String(sessionsResult.count ?? 0), icon: Clock3 },
+    { label: "Skor rata-rata", value: averageScore === null ? "-" : String(averageScore), icon: Target },
+    { label: "Topik aktif", value: String(topicsResult.count ?? 0), icon: BookOpenCheck },
+  ];
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
@@ -45,9 +59,9 @@ export default async function DashboardPage() {
             Tahap berikutnya akan menghubungkan dashboard ini ke kategori, topik, bank soal,
             sesi latihan, dan hasil skor otomatis.
           </p>
-          <button className="mt-6 rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+          <Link href="/latihan" className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
             Mulai Latihan
-          </button>
+          </Link>
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3">
