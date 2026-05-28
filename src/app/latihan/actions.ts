@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-const examCategoryTargets = new Map([
+const defaultExamCategoryTargets = new Map([
   ["TWK", 5],
   ["TIU", 5],
   ["TKP", 5],
@@ -95,18 +95,23 @@ export async function startExam() {
     redirect("/login");
   }
 
-  const { data: questions, error: questionsError } = await supabase
-    .from("questions")
-    .select("id, category_id, categories(code)")
-    .eq("status", "published");
+  const [{ data: questions, error: questionsError }, { data: practiceSetting }] = await Promise.all([
+    supabase
+      .from("questions")
+      .select("id, category_id, categories(code)")
+      .eq("status", "published"),
+    supabase.from("app_settings").select("value").eq("key", "practice").maybeSingle(),
+  ]);
 
   if (questionsError || !questions?.length) {
     redirect("/latihan?message=Belum ada soal published untuk simulasi ujian");
   }
 
+  const practiceConfig = practiceSetting?.value as { exam_category_targets?: Record<string, number> } | null;
+  const targetEntries = Object.entries(practiceConfig?.exam_category_targets ?? Object.fromEntries(defaultExamCategoryTargets));
   const selectedQuestions: ExamQuestion[] = [];
 
-  for (const [categoryCode, target] of examCategoryTargets) {
+  for (const [categoryCode, target] of targetEntries) {
     const categoryQuestions = ((questions ?? []) as ExamQuestion[]).filter((question) => {
       const category = Array.isArray(question.categories) ? question.categories[0] : question.categories;
       return category?.code === categoryCode;

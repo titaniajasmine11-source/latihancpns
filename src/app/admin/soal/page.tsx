@@ -22,8 +22,36 @@ type Question = {
 };
 
 export default async function AdminQuestionsPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
-  const { message } = await searchParams;
+  const { message, category, topic, status, source } = await searchParams as {
+    message?: string;
+    category?: string;
+    topic?: string;
+    status?: string;
+    source?: string;
+  };
   const { supabase } = await requireAdmin();
+
+  let questionsQuery = supabase
+    .from("questions")
+    .select("id, question_text, difficulty, status, source_type, created_at, categories(code), topics(name)")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (category) {
+    questionsQuery = questionsQuery.eq("category_id", Number(category));
+  }
+
+  if (topic) {
+    questionsQuery = questionsQuery.eq("topic_id", Number(topic));
+  }
+
+  if (status) {
+    questionsQuery = questionsQuery.eq("status", status);
+  }
+
+  if (source) {
+    questionsQuery = questionsQuery.eq("source_type", source);
+  }
 
   const [{ data: categories }, { data: questions }] = await Promise.all([
     supabase
@@ -31,11 +59,7 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
       .select("id, code, name, topics(id, name, slug)")
       .order("id", { ascending: true })
       .order("name", { referencedTable: "topics", ascending: true }),
-    supabase
-      .from("questions")
-      .select("id, question_text, difficulty, status, source_type, created_at, categories(code), topics(name)")
-      .order("created_at", { ascending: false })
-      .limit(30),
+    questionsQuery,
   ]);
 
   return (
@@ -135,6 +159,25 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-black">Daftar soal terbaru</h2>
+          <form className="mt-4 grid gap-3 rounded-3xl bg-slate-50 p-4 sm:grid-cols-2" action="/admin/soal">
+            <select className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="category" defaultValue={category ?? ""}>
+              <option value="">Semua kategori</option>
+              {((categories ?? []) as Category[]).map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}
+            </select>
+            <select className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="topic" defaultValue={topic ?? ""}>
+              <option value="">Semua topik</option>
+              {((categories ?? []) as Category[]).flatMap((item) => item.topics.map((topicItem) => <option key={topicItem.id} value={topicItem.id}>{item.code} - {topicItem.name}</option>))}
+            </select>
+            <select className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="status" defaultValue={status ?? ""}>
+              <option value="">Semua status</option>
+              {['draft', 'approved', 'published', 'rejected', 'archived'].map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <select className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="source" defaultValue={source ?? ""}>
+              <option value="">Semua source</option>
+              {['manual', 'manual_seed', 'ai_generated'].map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <button className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white sm:col-span-2">Terapkan filter</button>
+          </form>
           <div className="mt-5 space-y-3">
             {((questions ?? []) as Question[]).map((question) => {
               const category = Array.isArray(question.categories) ? question.categories[0] : question.categories;

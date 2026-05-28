@@ -48,6 +48,12 @@ type UserAnswer = {
   score: number;
 };
 
+type ScoringSetting = {
+  TWK?: { passing_grade?: number };
+  TIU?: { passing_grade?: number };
+  TKP?: { passing_grade?: number };
+};
+
 export default async function ResultPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const supabase = await createClient();
@@ -74,7 +80,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
     redirect(`/latihan/${sessionId}`);
   }
 
-  const [{ data: sessionQuestions }, { data: answers }] = await Promise.all([
+  const [{ data: sessionQuestions }, { data: answers }, { data: scoringSetting }] = await Promise.all([
     supabase
       .from("session_questions")
       .select("position, questions(id, question_text, explanation, categories(code), question_options(id, label, option_text, is_correct, score))")
@@ -85,6 +91,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
       .select("question_id, selected_option_id, score")
       .eq("session_id", sessionId)
       .eq("user_id", user.id),
+    supabase.from("app_settings").select("value").eq("key", "scoring").maybeSingle(),
   ]);
 
   const answerByQuestion = new Map<number, UserAnswer>();
@@ -110,10 +117,11 @@ export default async function ResultPage({ params }: { params: Promise<{ session
     });
   });
 
+  const scoring = scoringSetting?.value as ScoringSetting | null;
   const passingGrades = new Map([
-    ["TWK", 65],
-    ["TIU", 80],
-    ["TKP", 166],
+    ["TWK", scoring?.TWK?.passing_grade ?? 65],
+    ["TIU", scoring?.TIU?.passing_grade ?? 80],
+    ["TKP", scoring?.TKP?.passing_grade ?? 166],
   ]);
 
   return (

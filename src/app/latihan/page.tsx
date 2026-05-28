@@ -21,6 +21,11 @@ type QuestionStock = {
   topic_id: number;
 };
 
+type PracticeSetting = {
+  default_question_count?: number;
+  allowed_question_counts?: number[];
+};
+
 export default async function PracticePickerPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
   const { message } = await searchParams;
   const supabase = await createClient();
@@ -32,13 +37,14 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
     redirect("/login");
   }
 
-  const [{ data: categories, error: categoriesError }, { data: questionStock }] = await Promise.all([
+  const [{ data: categories, error: categoriesError }, { data: questionStock }, { data: practiceSetting }] = await Promise.all([
     supabase
       .from("categories")
       .select("id, code, name, description, topics(id, name, slug, is_active)")
       .order("id", { ascending: true })
       .order("name", { referencedTable: "topics", ascending: true }),
     supabase.from("questions").select("topic_id").eq("status", "published"),
+    supabase.from("app_settings").select("value").eq("key", "practice").maybeSingle(),
   ]);
 
   if (categoriesError) {
@@ -49,6 +55,9 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
   ((questionStock ?? []) as QuestionStock[]).forEach((question) => {
     stockByTopic.set(question.topic_id, (stockByTopic.get(question.topic_id) ?? 0) + 1);
   });
+  const practiceConfig = practiceSetting?.value as PracticeSetting | null;
+  const allowedQuestionCounts = practiceConfig?.allowed_question_counts?.length ? practiceConfig.allowed_question_counts : [5, 10, 20];
+  const defaultQuestionCount = practiceConfig?.default_question_count ?? 10;
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
@@ -128,7 +137,17 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                       {hasStock ? (
                         <form action={startPractice} className="mt-4">
                           <input type="hidden" name="topic_id" value={topic.id} />
-                          <input type="hidden" name="question_count" value={Math.min(stock, 10)} />
+                          <label className="mb-3 block">
+                            <span className="text-xs font-black uppercase tracking-wide text-slate-500">Jumlah soal</span>
+                            <select className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="question_count" defaultValue={Math.min(stock, defaultQuestionCount)}>
+                              {allowedQuestionCounts
+                                .filter((count) => count <= stock)
+                                .map((count) => (
+                                  <option key={count} value={count}>{count} soal</option>
+                                ))}
+                              {!allowedQuestionCounts.some((count) => count <= stock) ? <option value={stock}>{stock} soal</option> : null}
+                            </select>
+                          </label>
                           <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-800">
                             Mulai topik ini
                           </button>
