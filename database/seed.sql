@@ -39,7 +39,7 @@ on conflict (category_id, slug) do update set name = excluded.name;
 
 insert into app_settings (key, value) values
   ('scoring', '{"TWK":{"correct":5,"wrong":0,"passing_grade":65},"TIU":{"correct":5,"wrong":0,"passing_grade":80},"TKP":{"min":1,"max":5,"passing_grade":166}}'),
-  ('practice', '{"default_question_count":10,"allowed_question_counts":[5,10,20],"exam_duration_minutes":100,"exam_category_targets":{"TWK":5,"TIU":5,"TKP":5}}'),
+  ('practice', '{"default_question_count":10,"allowed_question_counts":[5,10,20],"exam_duration_minutes":100,"exam_category_targets":{"TWK":15,"TIU":15,"TKP":15}}'),
   ('generation_limits', '{"max_per_click":5,"max_per_day":25,"retry":2}')
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
@@ -95,6 +95,75 @@ with seed_questions as (
 insert into question_options (question_id, label, option_text, is_correct, score)
 select question_id, label, option_text, label = answer_label, score
 from option_rows
+on conflict (question_id, label) do update set
+  option_text = excluded.option_text,
+  is_correct = excluded.is_correct,
+  score = excluded.score;
+
+with generated_questions as (
+  select c.id as category_id, c.code as category_code, t.id as topic_id, t.name as topic_name, t.slug as topic_slug, gs.n
+  from categories c
+  join topics t on t.category_id = c.id
+  cross join generate_series(1, 5) gs(n)
+), inserted_generated_questions as (
+  insert into questions (category_id, topic_id, question_text, explanation, difficulty, status, source_type, generated_by_ai, published_at)
+  select
+    category_id,
+    topic_id,
+    case
+      when category_code = 'TWK' then 'Latihan TWK topik ' || topic_name || ' nomor ' || n || ': sikap yang paling sesuai dengan nilai kebangsaan adalah...'
+      when category_code = 'TIU' then 'Latihan TIU topik ' || topic_name || ' nomor ' || n || ': pilih jawaban yang paling logis berdasarkan pola atau hubungan yang diberikan.'
+      else 'Latihan TKP topik ' || topic_name || ' nomor ' || n || ': sikap kerja yang paling tepat dalam situasi pelayanan adalah...'
+    end,
+    case
+      when category_code = 'TWK' then 'Jawaban terbaik menunjukkan kepatuhan pada konstitusi, persatuan, integritas, dan kepentingan nasional.'
+      when category_code = 'TIU' then 'Jawaban terbaik dipilih dengan menelusuri pola, relasi, atau kesimpulan yang paling konsisten.'
+      else 'Jawaban terbaik menunjukkan orientasi pelayanan, profesionalisme, integritas, dan kemampuan beradaptasi.'
+    end,
+    case when n in (1, 2) then 'mudah' when n in (3, 4) then 'sedang' else 'sulit' end,
+    'published',
+    'generated_seed',
+    false,
+    now()
+  from generated_questions gq
+  where not exists (
+    select 1 from questions existing
+    where existing.question_text = case
+      when gq.category_code = 'TWK' then 'Latihan TWK topik ' || gq.topic_name || ' nomor ' || gq.n || ': sikap yang paling sesuai dengan nilai kebangsaan adalah...'
+      when gq.category_code = 'TIU' then 'Latihan TIU topik ' || gq.topic_name || ' nomor ' || gq.n || ': pilih jawaban yang paling logis berdasarkan pola atau hubungan yang diberikan.'
+      else 'Latihan TKP topik ' || gq.topic_name || ' nomor ' || gq.n || ': sikap kerja yang paling tepat dalam situasi pelayanan adalah...'
+    end
+  )
+  returning id, category_id, question_text
+), generated_option_rows as (
+  select iq.id as question_id, c.code as category_code, option_data.label, option_data.option_text,
+    case
+      when c.code in ('TWK', 'TIU') and option_data.label = 'A' then true
+      when c.code = 'TKP' and option_data.label = 'A' then true
+      else false
+    end as is_correct,
+    case
+      when c.code in ('TWK', 'TIU') and option_data.label = 'A' then 5
+      when c.code in ('TWK', 'TIU') then 0
+      when c.code = 'TKP' and option_data.label = 'A' then 5
+      when c.code = 'TKP' and option_data.label = 'B' then 4
+      when c.code = 'TKP' and option_data.label = 'C' then 3
+      when c.code = 'TKP' and option_data.label = 'D' then 2
+      else 1
+    end as score
+  from inserted_generated_questions iq
+  join categories c on c.id = iq.category_id
+  cross join lateral (values
+    ('A', 'Mengambil keputusan sesuai aturan, etika, dan kepentingan publik.'),
+    ('B', 'Menunda keputusan sampai ada tekanan dari pihak lain.'),
+    ('C', 'Mengutamakan kenyamanan pribadi sebelum kewajiban.'),
+    ('D', 'Mengikuti pendapat mayoritas tanpa memeriksa aturan.'),
+    ('E', 'Mengabaikan masalah karena bukan tanggung jawab langsung.')
+  ) as option_data(label, option_text)
+)
+insert into question_options (question_id, label, option_text, is_correct, score)
+select question_id, label, option_text, is_correct, score
+from generated_option_rows
 on conflict (question_id, label) do update set
   option_text = excluded.option_text,
   is_correct = excluded.is_correct,

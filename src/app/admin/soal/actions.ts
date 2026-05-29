@@ -8,6 +8,21 @@ const optionLabels = ["A", "B", "C", "D", "E"] as const;
 const reviewStatuses = new Set(["draft", "approved", "published", "rejected", "archived"]);
 const difficulties = new Set(["mudah", "sedang", "sulit"]);
 
+type ImportQuestion = {
+  category_code: string;
+  topic_slug: string;
+  difficulty?: string;
+  status?: string;
+  question_text: string;
+  explanation: string;
+  options: {
+    label: string;
+    text: string;
+    score: number;
+    is_correct?: boolean;
+  }[];
+};
+
 export async function createManualQuestion(formData: FormData) {
   const { supabase, user } = await requireAdmin();
   const categoryId = Number(formData.get("category_id"));
@@ -193,4 +208,118 @@ export async function updateQuestion(formData: FormData) {
   revalidatePath(`/admin/soal/${questionId}`);
   revalidatePath("/latihan");
   redirect(`/admin/soal/${questionId}?message=Soal berhasil diperbarui`);
+}
+
+export async function importQuestions(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const rawJson = String(formData.get("questions_json") ?? "").trim();
+
+  if (!rawJson) {
+    redirect("/admin/soal?message=JSON import wajib diisi");
+  }
+
+  let payload: unknown;
+
+  try {
+    payload = JSON.parse(rawJson);
+  } catch {
+    redirect("/admin/soal?message=Format JSON import tidak valid");
+  }
+
+  const questions = Array.isArray(payload) ? payload as ImportQuestion[] : (payload as { questions?: ImportQuestion[] }).questions;
+
+  if (!Array.isArray(questions) || questions.length === 0 || questions.length > 100) {
+    redirect("/admin/soal?message=Import harus berisi 1 sampai 100 soal");
+  }
+
+  const [{ data: categories }, { data: topics }, { data: existingQuestions }] = await Promise.all([
+    supabase.from("categories").select("id, code"),
+    supabase.from("topics").select("id, slug, category_id, categories(code)"),
+    supabase.from("questions").select("question_text"),
+  ]);
+  const categoryByCode = new Map((categories ?? []).map((category) => [category.code, category]));
+  const topicByKey = new Map((topics ?? []).map((topic) => {
+    const category = Array.isArray(topic.categories) ? topic.categories[0] : topic.categories;
+    return [`${category?.code}:${topic.slug}`, topic];
+  }));
+  const existingTexts = new Set((existingQuestions ?? []).map((question) => question.question_text.trim().toLowerCase()));
+  let imported = 0;
+
+  for (const [index, item] of questions.entries()) {
+    const category = categoryByCode.get(item.category_code);
+    const topic = topicByKey.get(`${item.category_code}:${item.topic_slug}`);
+    const difficulty = item.difficulty ?? "sedang";
+    const status = item.status ?? "published";
+    const textKey = item.question_text?.trim().toLowerCase();
+
+    if (!category || !topic || !textKey || !item.explanation?.trim() || !difficulties.has(difficulty) || !reviewStatuses.has(status)) {
+      redirect(`/admin/soal?message=Data import soal ke-${index + 1} tidak valid`);
+    }
+
+    if (existingTexts.has(textKey)) {
+      continue;
+    }
+
+    if (!Array.isArray(item.options) || item.options.length !== 5) {
+      redirect(`/admin/soal?message=Opsi soal ke-${index + 1} harus lengkap A-E`);
+    }
+
+    const labels = item.options.map((option) => option.label).sort().join("");
+    if (labels !== optionLabels.join("")) {
+      redirect(`/admin/soal?message=Label opsi soal ke-${index + 1} harus A-E`);
+    }
+
+    const isTkp = item.category_code === "TKP";
+    const correctCount = item.options.filter((option) => option.is_correct).length;
+    if (!isTkp && correctCount !== 1) {
+      redirect(`/admin/soal?message=TWK/TIU soal ke-${index + 1} harus punya satu jawaban benar`);
+    }
+
+    if (isTkp && item.options.some((option) => option.score < 1 || option.score > 5)) {
+      redirect(`/admin/soal?message=Skor TKP soal ke-${index + 1} harus 1 sampai 5`);
+    }
+
+    const now = new Date().toISOString();
+    const { data: question, error: questionError } = await supabase
+      .from("questions")
+      .insert({
+        category_id: category.id,
+        topic_id: topic.id,
+        question_text: item.question_text.trim(),
+        explanation: item.explanation.trim(),
+        difficulty,
+        status,
+        source_type: "manual_import",
+        generated_by_ai: false,
+        created_by: user.id,
+        reviewed_by: status === "published" ? user.id : null,
+        reviewed_at: status === "published" ? now : null,
+        published_at: status === "published" ? now : null,
+      })
+      .select("id")
+      .single();
+
+    if (questionError || !question) {
+      redirect(`/admin/soal?message=Gagal import soal ke-${index + 1}`);
+    }
+
+    const { error: optionsError } = await supabase.from("question_options").insert(
+      item.options.map((option) => ({
+        question_id: question.id,
+        label: option.label,
+        option_text: option.text.trim(),
+        score: option.score,
+        is_correct: isTkp ? option.score === 5 : option.is_correct === true,
+      })),
+    );
+
+    if (optionsError) {
+      redirect(`/admin/soal?message=Opsi soal ke-${index + 1} gagal disimpan`);
+    }
+
+    existingTexts.add(textKey);
+    imported += 1;
+  }
+
+  redirect(`/admin/soal?message=${encodeURIComponent(`${imported} soal berhasil diimport`)}`);
 }

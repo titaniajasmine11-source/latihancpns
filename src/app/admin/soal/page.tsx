@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, PlusCircle } from "lucide-react";
-import { createManualQuestion, updateQuestionStatus } from "@/app/admin/soal/actions";
+import { createManualQuestion, importQuestions, updateQuestionStatus } from "@/app/admin/soal/actions";
 import { requireAdmin } from "@/lib/admin";
 
 type Category = {
@@ -152,6 +152,24 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
               </label>
               <button className="w-full rounded-2xl bg-emerald-700 px-5 py-4 font-black text-white hover:bg-emerald-800">
                 Simpan soal
+              </button>
+            </form>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-black">Import soal massal</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Paste JSON berisi maksimal 100 soal. Gunakan `category_code`, `topic_slug`, `question_text`, `explanation`, dan 5 opsi A-E.
+            </p>
+            <form action={importQuestions} className="mt-4 space-y-3">
+              <textarea
+                className="min-h-72 w-full rounded-2xl border border-slate-200 bg-slate-950 p-4 font-mono text-xs leading-5 text-emerald-100 outline-none focus:border-emerald-500"
+                name="questions_json"
+                placeholder='[{"category_code":"TIU","topic_slug":"aritmetika","question_text":"...","explanation":"...","options":[{"label":"A","text":"...","score":0,"is_correct":false}]}]'
+                required
+              />
+              <button className="w-full rounded-2xl bg-slate-950 px-5 py-4 font-black text-white hover:bg-slate-800">
+                Import soal
               </button>
             </form>
           </section>
