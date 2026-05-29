@@ -16,10 +16,10 @@ const categories = [
 ];
 
 const roadmap = [
-  "Auth Supabase dan profil user",
-  "Bank soal dengan status draft sampai published",
-  "Sesi latihan, jawaban, skor, dan pembahasan",
-  "Admin soal dan generator Gemini",
+  "Simulasi ujian berbatas waktu dengan auto-submit",
+  "Navigasi nomor soal dan penyimpanan jawaban otomatis",
+  "Hasil kelulusan berdasarkan ambang TWK, TIU, dan TKP",
+  "Admin bank soal, import massal, dan generator AI",
 ];
 
 export default function Home() {
@@ -34,39 +34,39 @@ export default function Home() {
             CPNS Practice Web
           </div>
           <a
-            href="#mvp"
+            href="/ujian"
             className="hidden rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white sm:inline-flex"
           >
-            Lihat MVP
+            Mulai Ujian
           </a>
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="space-y-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800">
-              <Sparkles className="size-4" /> Mobile-first dengan generator soal AI
+              <Sparkles className="size-4" /> Simulasi CAT CPNS berbasis web
             </div>
             <div className="space-y-4">
               <h1 className="max-w-3xl text-4xl font-black tracking-tight sm:text-6xl">
-                Latihan CPNS pribadi yang siap tumbuh jadi platform tryout.
+                Platform latihan ujian CPNS dengan pengalaman seperti CAT.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-700">
-                Fondasi aplikasi mengikuti PRD: latihan TWK, TIU, TKP, skor otomatis,
-                pembahasan, riwayat, admin soal, dan generator Gemini dengan validasi aman.
+                Kerjakan simulasi TWK, TIU, dan TKP dengan timer, navigasi nomor soal,
+                skor otomatis, pembahasan, riwayat, dan bank soal yang bisa dikelola admin.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <a
-                href="#kategori"
+                href="/ujian"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-4 font-bold text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-800"
               >
-                Mulai Rancang Latihan <ArrowRight className="size-4" />
+                Mulai Simulasi CAT <ArrowRight className="size-4" />
               </a>
               <a
-                href="#security"
+                href="/login"
                 className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-slate-500"
               >
-                Cek Prinsip Security
+                Masuk Akun
               </a>
             </div>
           </div>
@@ -75,10 +75,10 @@ export default function Home() {
             <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-300">Sesi latihan</p>
-                  <h2 className="text-xl font-bold">TIU - Silogisme</h2>
+                  <p className="text-sm text-slate-300">Simulasi ujian</p>
+                  <h2 className="text-xl font-bold">CAT CPNS</h2>
                 </div>
-                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-sm text-emerald-200">3/10</span>
+                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-sm text-emerald-200">00:58:12</span>
               </div>
               <div className="rounded-3xl bg-white p-5 text-slate-950">
                 <p className="mb-4 text-sm font-semibold text-emerald-700">Pertanyaan</p>
@@ -119,13 +119,13 @@ export default function Home() {
           ))}
         </section>
 
-        <section id="mvp" className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+        <section id="fitur" className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="rounded-3xl bg-emerald-800 p-6 text-white">
             <ClipboardList className="mb-5 size-8" />
-            <h2 className="text-2xl font-black">Scope MVP</h2>
+            <h2 className="text-2xl font-black">Siap latihan ujian</h2>
             <p className="mt-3 leading-7 text-emerald-50">
-              Fokus pertama adalah alur latihan yang stabil sebelum fitur publik seperti ranking,
-              payment, sertifikat, atau tryout resmi penuh.
+              Fokus pada pengalaman ujian: instruksi sebelum mulai, timer, palet nomor soal,
+              auto-submit, pembahasan, dan status kelulusan simulasi.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

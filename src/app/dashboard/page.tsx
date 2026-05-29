@@ -51,17 +51,20 @@ export default async function DashboardPage() {
         </header>
 
         <section className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
-          <p className="text-sm font-semibold text-emerald-200">Latihan berikutnya</p>
+          <p className="text-sm font-semibold text-emerald-200">Ujian berikutnya</p>
           <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
-            Pilih kategori dan mulai sesi 10 soal pertama Anda.
+            Mulai simulasi CAT CPNS atau latihan per topik.
           </h2>
           <p className="mt-4 max-w-2xl leading-7 text-slate-300">
-            Tahap berikutnya akan menghubungkan dashboard ini ke kategori, topik, bank soal,
-            sesi latihan, dan hasil skor otomatis.
+            Simulasi ujian memakai timer, palet nomor soal, auto-submit, skor otomatis,
+            pembahasan, dan status kelulusan berdasarkan ambang TWK, TIU, dan TKP.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link href="/ujian" className="inline-flex justify-center rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+              Mulai Simulasi CAT
+            </Link>
             <Link href="/latihan" className="inline-flex justify-center rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
-              Mulai Latihan
+              Latihan Topik
             </Link>
             <Link href="/riwayat" className="inline-flex justify-center rounded-2xl border border-white/20 px-5 py-4 font-black text-white hover:bg-white/10">
               Lihat Riwayat
