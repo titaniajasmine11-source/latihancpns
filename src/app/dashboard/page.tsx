@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BookOpenCheck, Clock3, LogOut, Target } from "lucide-react";
 import { logout } from "@/app/auth/actions";
+import { MotionArticle, MotionDiv, MotionSection } from "@/components/motion-primitives";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
@@ -36,9 +37,9 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex items-center justify-between rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
+    <main className="min-h-screen aurora-bg px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+      <MotionSection className="mx-auto flex w-full max-w-6xl flex-col gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <header className="glass-panel flex items-center justify-between rounded-[2rem] p-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
             <h1 className="mt-1 text-xl font-black sm:text-2xl">Halo, {fullName}</h1>
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
           </form>
         </header>
 
-        <section className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
+        <MotionDiv className="dark-glass rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           <p className="text-sm font-semibold text-emerald-200">Ujian berikutnya</p>
           <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
             Mulai simulasi CAT CPNS atau latihan per topik.
@@ -70,21 +71,21 @@ export default async function DashboardPage() {
               Lihat Riwayat
             </Link>
           </div>
-        </section>
+        </MotionDiv>
 
         <section className="grid gap-4 sm:grid-cols-3">
           {quickStats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" key={stat.label}>
+              <MotionArticle whileHover={{ y: -6 }} className="glass-panel rounded-3xl p-5" key={stat.label}>
                 <Icon className="mb-5 size-6 text-emerald-700" />
                 <p className="text-3xl font-black">{stat.value}</p>
                 <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
-              </article>
+              </MotionArticle>
             );
           })}
         </section>
-      </section>
+      </MotionSection>
     </main>
   );
 }
