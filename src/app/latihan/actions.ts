@@ -21,8 +21,42 @@ type PracticeConfig = {
   exam_duration_minutes?: number;
 };
 
+type PracticeSession = {
+  id: string;
+  category_id: number | null;
+  topic_id: number | null;
+  total_questions: number;
+  status: string;
+  mode: string;
+  expires_at: string | null;
+};
+
 function shuffle<T>(items: T[]) {
-  return [...items].sort(() => Math.random() - 0.5);
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+async function finalizeSession({
+  supabase,
+  session,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  session: PracticeSession;
+}) {
+  const { error } = await supabase.rpc("finish_session", { p_session_id: session.id });
+
+  if (error) {
+    return { ok: false, message: error.message || "Gagal menyelesaikan sesi" };
+  }
+
+  revalidatePath("/dashboard");
+  return { ok: true, message: "Sesi selesai" };
 }
 
 export async function startPractice(formData: FormData) {
@@ -34,7 +68,7 @@ export async function startPractice(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { data: topic, error: topicError } = await supabase
@@ -51,44 +85,28 @@ export async function startPractice(formData: FormData) {
     .from("questions")
     .select("id")
     .eq("topic_id", topicId)
-    .eq("status", "published")
-    .limit(questionCount);
+    .eq("status", "published");
 
   if (questionsError || !questions?.length) {
     redirect("/latihan?message=Belum ada soal published untuk topik ini");
   }
 
-  const { data: session, error: sessionError } = await supabase
-    .from("practice_sessions")
-    .insert({
-      user_id: user.id,
-      category_id: topic.category_id,
-      topic_id: topic.id,
-      mode: "practice",
-      total_questions: questions.length,
-    })
-    .select("id")
-    .single();
+  const selectedQuestions = shuffle(questions).slice(0, questionCount);
 
-  if (sessionError || !session) {
+  const { data: sessionId, error: sessionError } = await supabase.rpc("create_practice_session", {
+    p_category_id: topic.category_id,
+    p_topic_id: topic.id,
+    p_mode: "practice",
+    p_question_ids: selectedQuestions.map((question) => question.id),
+    p_duration_seconds: null,
+    p_expires_at: null,
+  });
+
+  if (sessionError || !sessionId) {
     redirect("/latihan?message=Gagal membuat sesi latihan");
   }
 
-  const sessionQuestions = questions.map((question, index) => ({
-    session_id: session.id,
-    question_id: question.id,
-    position: index + 1,
-  }));
-
-  const { error: sessionQuestionsError } = await supabase
-    .from("session_questions")
-    .insert(sessionQuestions);
-
-  if (sessionQuestionsError) {
-    redirect("/latihan?message=Gagal menyiapkan soal latihan");
-  }
-
-  redirect(`/latihan/${session.id}`);
+  redirect(`/latihan/${sessionId}`);
 }
 
 export async function startExam() {
@@ -98,7 +116,7 @@ export async function startExam() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const [{ data: questions, error: questionsError }, { data: practiceSetting }] = await Promise.all([
@@ -126,47 +144,32 @@ export async function startExam() {
       return category?.code === categoryCode;
     });
 
+    if (categoryQuestions.length < target) {
+      redirect(`/latihan?message=${encodeURIComponent(`Stok soal ${categoryCode} belum cukup (${categoryQuestions.length}/${target})`)}`);
+    }
+
     selectedQuestions.push(...shuffle(categoryQuestions).slice(0, target));
   }
 
-  if (selectedQuestions.length < 3) {
+  if (selectedQuestions.length !== targetEntries.reduce((total, [, target]) => total + target, 0)) {
     redirect("/latihan?message=Stok soal simulasi belum cukup. Tambahkan soal TWK, TIU, dan TKP terlebih dahulu");
   }
 
-  const { data: session, error: sessionError } = await supabase
-    .from("practice_sessions")
-    .insert({
-      user_id: user.id,
-      category_id: null,
-      topic_id: null,
-      mode: "exam",
-      total_questions: selectedQuestions.length,
-      duration_seconds: durationMinutes * 60,
-      started_at: startedAt.toISOString(),
-      expires_at: expiresAt.toISOString(),
-    })
-    .select("id")
-    .single();
+  const shuffledQuestions = shuffle(selectedQuestions);
+  const { data: sessionId, error: sessionError } = await supabase.rpc("create_practice_session", {
+    p_category_id: null,
+    p_topic_id: null,
+    p_mode: "exam",
+    p_question_ids: shuffledQuestions.map((question) => question.id),
+    p_duration_seconds: durationMinutes * 60,
+    p_expires_at: expiresAt.toISOString(),
+  });
 
-  if (sessionError || !session) {
+  if (sessionError || !sessionId) {
     redirect("/latihan?message=Gagal membuat simulasi ujian");
   }
 
-  const sessionQuestions = shuffle(selectedQuestions).map((question, index) => ({
-    session_id: session.id,
-    question_id: question.id,
-    position: index + 1,
-  }));
-
-  const { error: sessionQuestionsError } = await supabase
-    .from("session_questions")
-    .insert(sessionQuestions);
-
-  if (sessionQuestionsError) {
-    redirect("/latihan?message=Gagal menyiapkan simulasi ujian");
-  }
-
-  redirect(`/latihan/${session.id}`);
+  redirect(`/latihan/${sessionId}`);
 }
 
 export async function saveAnswer(formData: FormData) {
@@ -179,47 +182,17 @@ export async function saveAnswer(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
-  const { data: sessionQuestion } = await supabase
-    .from("session_questions")
-    .select("id, practice_sessions!inner(id, status)")
-    .eq("session_id", sessionId)
-    .eq("question_id", questionId)
-    .eq("practice_sessions.user_id", user.id)
-    .eq("practice_sessions.status", "ongoing")
-    .maybeSingle();
-
-  if (!sessionQuestion) {
-    redirect(`/latihan/${sessionId}?message=Sesi atau soal tidak valid`);
-  }
-
-  const { data: option, error: optionError } = await supabase
-    .from("question_options")
-    .select("id, score")
-    .eq("id", selectedOptionId)
-    .eq("question_id", questionId)
-    .single();
-
-  if (optionError || !option) {
-    redirect(`/latihan/${sessionId}?message=Pilihan jawaban tidak valid`);
-  }
-
-  const { error } = await supabase.from("user_answers").upsert(
-    {
-      session_id: sessionId,
-      user_id: user.id,
-      question_id: questionId,
-      selected_option_id: option.id,
-      score: option.score,
-      answered_at: new Date().toISOString(),
-    },
-    { onConflict: "session_id,question_id" },
-  );
+  const { error } = await supabase.rpc("save_session_answer", {
+    p_session_id: sessionId,
+    p_question_id: questionId,
+    p_selected_option_id: selectedOptionId,
+  });
 
   if (error) {
-    redirect(`/latihan/${sessionId}?message=Gagal menyimpan jawaban`);
+    redirect(`/latihan/${sessionId}?message=${encodeURIComponent(error.message || "Gagal menyimpan jawaban")}`);
   }
 
   revalidatePath(`/latihan/${sessionId}`);
@@ -233,7 +206,7 @@ export async function finishPractice(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { data: session, error: sessionError } = await supabase
@@ -253,56 +226,32 @@ export async function finishPractice(formData: FormData) {
 
   const now = new Date();
   const expired = session.mode === "exam" && session.expires_at && new Date(session.expires_at) <= now;
+  const result = await finalizeSession({ supabase, session: session as PracticeSession });
 
-  const { data: answers, error: answersError } = await supabase
-    .from("user_answers")
-    .select("score, question_options(is_correct)")
-    .eq("session_id", sessionId)
-    .eq("user_id", user.id);
-
-  if (answersError) {
-    redirect(`/latihan/${sessionId}?message=Gagal menghitung skor`);
+  if (!result.ok && !expired) {
+    redirect(`/latihan/${sessionId}?message=${encodeURIComponent(result.message)}`);
   }
 
-  const totalScore = (answers ?? []).reduce((total, answer) => total + (answer.score ?? 0), 0);
-  const correctCount = (answers ?? []).filter((answer) => {
-    const option = Array.isArray(answer.question_options)
-      ? answer.question_options[0]
-      : answer.question_options;
-    return option?.is_correct === true;
-  }).length;
-  const answeredQuestions = answers?.length ?? 0;
-
-  const { error: sessionUpdateError } = await supabase
-    .from("practice_sessions")
-    .update({ status: "finished", total_score: totalScore, finished_at: now.toISOString() })
-    .eq("id", sessionId)
-    .eq("user_id", user.id)
-    .eq("status", "ongoing");
-
-  if (sessionUpdateError && !expired) {
-    redirect(`/latihan/${sessionId}?message=Gagal menyelesaikan sesi`);
-  }
-
-  const { error: scoreError } = await supabase.from("score_results").upsert(
-    {
-      session_id: sessionId,
-      user_id: user.id,
-      category_id: session.category_id,
-      topic_id: session.topic_id,
-      total_questions: session.total_questions,
-      answered_questions: answeredQuestions,
-      correct_count: correctCount,
-      wrong_count: Math.max(answeredQuestions - correctCount, 0),
-      total_score: totalScore,
-    },
-    { onConflict: "session_id" },
-  );
-
-  if (scoreError) {
-    redirect(`/latihan/${sessionId}?message=Gagal menyimpan skor`);
-  }
-
-  revalidatePath("/dashboard");
   redirect(`/hasil/${sessionId}`);
+}
+
+export async function finishExpiredSession(sessionId: string, userId: string) {
+  const supabase = await createClient();
+  const { data: session, error: sessionError } = await supabase
+    .from("practice_sessions")
+    .select("id, category_id, topic_id, total_questions, status, mode, expires_at")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .single();
+
+  if (sessionError || !session || session.status !== "ongoing" || session.mode !== "exam") {
+    return false;
+  }
+
+  if (!session.expires_at || new Date(session.expires_at) > new Date()) {
+    return false;
+  }
+
+  const result = await finalizeSession({ supabase, session: session as PracticeSession });
+  return result.ok;
 }

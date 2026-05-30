@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 
 const optionLabels = ["A", "B", "C", "D", "E"] as const;
 const reviewStatuses = new Set(["draft", "approved", "published", "rejected", "archived"]);
+const importStatuses = new Set(["draft", "approved"]);
 const difficulties = new Set(["mudah", "sedang", "sulit"]);
 
 type ImportQuestion = {
@@ -62,6 +63,10 @@ export async function createManualQuestion(formData: FormData) {
 
   if (isTkp && options.some((option) => option.score < 1 || option.score > 5)) {
     redirect("/admin/soal?message=Skor TKP harus bernilai 1 sampai 5");
+  }
+
+  if (isTkp && !options.some((option) => option.score === 5)) {
+    redirect("/admin/soal?message=Soal TKP wajib punya minimal satu opsi skor 5");
   }
 
   const { data: question, error: questionError } = await supabase
@@ -176,6 +181,14 @@ export async function updateQuestion(formData: FormData) {
     redirect(`/admin/soal/${questionId}?message=Jawaban benar tidak valid`);
   }
 
+  if (isTkp) {
+    const hasBestScore = optionLabels.some((label) => Number(formData.get(`score_${label.toLowerCase()}`) ?? 0) === 5);
+
+    if (!hasBestScore) {
+      redirect(`/admin/soal/${questionId}?message=Soal TKP wajib punya minimal satu opsi skor 5`);
+    }
+  }
+
   for (const label of optionLabels) {
     const optionId = Number(formData.get(`option_id_${label.toLowerCase()}`));
     const optionText = String(formData.get(`option_${label.toLowerCase()}`) ?? "").trim();
@@ -249,10 +262,10 @@ export async function importQuestions(formData: FormData) {
     const category = categoryByCode.get(item.category_code);
     const topic = topicByKey.get(`${item.category_code}:${item.topic_slug}`);
     const difficulty = item.difficulty ?? "sedang";
-    const status = item.status ?? "published";
+    const status = item.status ?? "draft";
     const textKey = item.question_text?.trim().toLowerCase();
 
-    if (!category || !topic || !textKey || !item.explanation?.trim() || !difficulties.has(difficulty) || !reviewStatuses.has(status)) {
+    if (!category || !topic || !textKey || !item.explanation?.trim() || !difficulties.has(difficulty) || !importStatuses.has(status)) {
       redirect(`/admin/soal?message=Data import soal ke-${index + 1} tidak valid`);
     }
 
@@ -275,8 +288,16 @@ export async function importQuestions(formData: FormData) {
       redirect(`/admin/soal?message=TWK/TIU soal ke-${index + 1} harus punya satu jawaban benar`);
     }
 
+    if (!isTkp && item.options.some((option) => option.score !== (option.is_correct ? 5 : 0))) {
+      redirect(`/admin/soal?message=Skor TWK/TIU soal ke-${index + 1} harus 5 untuk benar dan 0 untuk salah`);
+    }
+
     if (isTkp && item.options.some((option) => option.score < 1 || option.score > 5)) {
       redirect(`/admin/soal?message=Skor TKP soal ke-${index + 1} harus 1 sampai 5`);
+    }
+
+    if (isTkp && !item.options.some((option) => option.score === 5)) {
+      redirect(`/admin/soal?message=TKP soal ke-${index + 1} wajib punya minimal satu opsi skor 5`);
     }
 
     const now = new Date().toISOString();

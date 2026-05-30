@@ -12,9 +12,14 @@ const model = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const apiKey = process.env.GEMINI_API_KEY;
+const allowServiceRole = process.env.ALLOW_SERVICE_ROLE_SCRIPT === "true";
 
 if (!supabaseUrl || !serviceRoleKey || !apiKey) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, dan GEMINI_API_KEY wajib tersedia");
+}
+
+if (!allowServiceRole) {
+  throw new Error("Set ALLOW_SERVICE_ROLE_SCRIPT=true untuk menjalankan script service-role secara eksplisit");
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {

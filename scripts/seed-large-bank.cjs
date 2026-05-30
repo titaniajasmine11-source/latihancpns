@@ -8,9 +8,14 @@ config({ path: resolve(process.cwd(), ".env.local") });
 const targetPerTopic = Number(process.argv[2] ?? 30);
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const allowServiceRole = process.env.ALLOW_SERVICE_ROLE_SCRIPT === "true";
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib tersedia");
+}
+
+if (!allowServiceRole) {
+  throw new Error("Set ALLOW_SERVICE_ROLE_SCRIPT=true untuk menjalankan script service-role secara eksplisit");
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
