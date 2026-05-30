@@ -14,7 +14,7 @@ const navItems = [
 export function MobileBottomNav() {
   const pathname = usePathname();
 
-  const showNav = navItems.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const showNav = pathname === "/dashboard" || pathname === "/latihan" || pathname === "/riwayat";
 
   if (!showNav) {
     return null;

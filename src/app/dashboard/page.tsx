@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BookOpenCheck, Clock3, LogOut, Settings, Target, TrendingDown } from "lucide-react";
 import { logout } from "@/app/auth/actions";
-import { MotionArticle, MotionDiv, MotionSection } from "@/components/motion-primitives";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
@@ -67,7 +66,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="page-shell min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
-      <MotionSection className="mx-auto flex w-full max-w-6xl flex-col gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="nav-pill flex items-center justify-between rounded-[1.5rem] p-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
@@ -80,7 +79,7 @@ export default async function DashboardPage() {
           </form>
         </header>
 
-        <MotionDiv className="ink-card rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+        <div className="ink-card rounded-[2.4rem] p-6 text-white">
           <p className="text-sm font-semibold text-amber-200">Ujian berikutnya</p>
           <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
             Mulai simulasi CAT CPNS atau latihan per topik.
@@ -105,17 +104,17 @@ export default async function DashboardPage() {
               </Link>
             ) : null}
           </div>
-        </MotionDiv>
+        </div>
 
         <section className="grid gap-4 sm:grid-cols-3">
           {quickStats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <MotionArticle whileHover={{ y: -6 }} className="paper-card rounded-3xl p-5" key={stat.label}>
+              <article className="paper-card rounded-3xl p-5" key={stat.label}>
                 <Icon className="mb-5 size-6 text-amber-600" />
                 <p className="text-3xl font-black">{stat.value}</p>
                 <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
-              </MotionArticle>
+              </article>
             );
           })}
         </section>
@@ -143,7 +142,7 @@ export default async function DashboardPage() {
             </p>
           )}
         </section>
-      </MotionSection>
+      </section>
     </main>
   );
 }

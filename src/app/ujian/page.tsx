@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ClipboardCheck, Clock3, ShieldAlert } from "lucide-react";
 import { startExam } from "@/app/latihan/actions";
-import { MotionArticle, MotionDiv, MotionSection } from "@/components/motion-primitives";
 import { createClient } from "@/lib/supabase/server";
 
 type PracticeSetting = {
@@ -31,35 +30,35 @@ export default async function ExamInstructionPage() {
   const duration = practice?.exam_duration_minutes ?? 100;
 
   return (
-    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
-      <MotionSection className="mx-auto flex w-full max-w-5xl flex-col gap-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <MotionDiv className="dark-glass rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <p className="text-sm font-semibold text-emerald-200">Instruksi ujian</p>
+    <main className="page-shell min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+        <div className="ink-card rounded-[2.4rem] p-6 text-white">
+          <p className="text-sm font-semibold text-amber-200">Instruksi ujian</p>
           <h1 className="mt-3 text-5xl font-black tracking-[-0.05em] sm:text-6xl">Simulasi CAT CPNS</h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-300">
             Baca aturan sebelum mulai. Timer berjalan setelah tombol mulai ditekan dan ujian otomatis submit saat waktu habis.
           </p>
-        </MotionDiv>
+        </div>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          <MotionArticle whileHover={{ y: -6 }} className="glass-panel rounded-3xl p-5">
-            <ClipboardCheck className="mb-5 size-7 text-emerald-700" />
+          <article className="paper-card rounded-3xl p-5">
+            <ClipboardCheck className="mb-5 size-7 text-amber-600" />
             <p className="text-3xl font-black">{totalQuestions}</p>
             <p className="mt-1 text-sm font-semibold text-slate-600">Total soal</p>
-          </MotionArticle>
-          <MotionArticle whileHover={{ y: -6 }} className="glass-panel rounded-3xl p-5">
-            <Clock3 className="mb-5 size-7 text-emerald-700" />
+          </article>
+          <article className="paper-card rounded-3xl p-5">
+            <Clock3 className="mb-5 size-7 text-amber-600" />
             <p className="text-3xl font-black">{duration}</p>
             <p className="mt-1 text-sm font-semibold text-slate-600">Menit</p>
-          </MotionArticle>
-          <MotionArticle whileHover={{ y: -6 }} className="glass-panel rounded-3xl p-5">
+          </article>
+          <article className="paper-card rounded-3xl p-5">
             <ShieldAlert className="mb-5 size-7 text-amber-600" />
             <p className="text-3xl font-black">Auto</p>
             <p className="mt-1 text-sm font-semibold text-slate-600">Submit waktu habis</p>
-          </MotionArticle>
+          </article>
         </section>
 
-        <MotionDiv className="glass-panel rounded-[2rem] p-5" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+        <div className="paper-card rounded-[2rem] p-5">
           <h2 className="text-2xl font-black">Aturan pengerjaan</h2>
           <div className="mt-4 grid gap-3 text-sm font-semibold leading-6 text-slate-700">
             <p>1. Pastikan koneksi stabil sebelum mulai ujian.</p>
@@ -73,13 +72,13 @@ export default async function ExamInstructionPage() {
               Kembali latihan
             </Link>
             <form action={startExam}>
-              <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-5 py-4 font-black text-white hover:bg-emerald-800">
+              <button className="primary-action inline-flex w-full justify-center rounded-2xl px-5 py-4 font-black">
                 Mulai ujian sekarang
               </button>
             </form>
           </div>
-        </MotionDiv>
-      </MotionSection>
+        </div>
+      </section>
     </main>
   );
 }

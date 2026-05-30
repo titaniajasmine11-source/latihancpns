@@ -117,9 +117,9 @@ export function ExamClient({
     <div className="mx-auto w-full max-w-4xl">
       <section className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          MODE <span className="text-orange-500">TRYOUT</span>
+          MODE <span className="text-amber-600">TRYOUT</span>
         </h1>
-        <button aria-expanded={showQuestionList} aria-label="Tampilkan daftar nomor soal" className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-3 py-2 font-bold text-blue-700 shadow-sm" onClick={() => setShowQuestionList((value) => !value)} type="button">
+        <button aria-expanded={showQuestionList} aria-label="Tampilkan daftar nomor soal" className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-3 py-2 font-bold text-slate-800 shadow-sm" onClick={() => setShowQuestionList((value) => !value)} type="button">
           <List className="size-5" /> <span className="hidden sm:inline">Nomor Soal</span> <ChevronDown className={`size-4 transition ${showQuestionList ? "rotate-180" : ""}`} />
         </button>
       </section>
@@ -131,7 +131,7 @@ export function ExamClient({
             const active = index === activeIndex;
 
             return (
-              <button className={`rounded-lg border px-3 py-2 text-sm font-bold shadow-sm ${active ? "border-blue-700 bg-blue-700 text-white" : answered ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-blue-200 bg-white text-blue-700"}`} key={item.question.id} onClick={() => setActiveIndex(index)} type="button">
+              <button className={`rounded-xl border px-3 py-2 text-sm font-bold shadow-sm ${active ? "border-slate-950 bg-slate-950 text-white" : answered ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 bg-white text-slate-700"}`} key={item.question.id} onClick={() => setActiveIndex(index)} type="button">
                 {item.position}
               </button>
             );
@@ -139,10 +139,10 @@ export function ExamClient({
         </section>
       ) : null}
 
-      <section className={`mb-5 rounded-lg border bg-white p-4 text-sm font-medium text-slate-700 ${remainingSeconds > 0 && remainingSeconds <= 300 ? "border-red-500" : "border-blue-200"}`}>
+      <section className={`mb-5 rounded-2xl border bg-white p-4 text-sm font-medium text-slate-700 ${remainingSeconds > 0 && remainingSeconds <= 300 ? "border-red-500" : "border-amber-200"}`}>
         <p>Progress jawaban tersimpan otomatis. Selesaikan sesi setelah semua soal terjawab.</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
-          <span className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white">{answeredCount}/{questions.length} dijawab</span>
+          <span className="rounded-full bg-slate-950 px-4 py-1.5 text-xs font-bold text-white">{answeredCount}/{questions.length} dijawab</span>
           {expiresAt ? <span className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs font-bold ${remainingSeconds <= 300 ? "bg-red-100 text-red-700" : "bg-slate-950 text-white"}`}><Clock3 className="size-3.5" /> {formatTime(remainingSeconds)}</span> : null}
           <span className="rounded-full bg-emerald-100 px-4 py-1.5 text-xs font-bold text-emerald-800">{progress}%</span>
           <span className={`rounded-full px-4 py-1.5 text-xs font-bold ${saveState === "error" ? "bg-red-100 text-red-700" : saveState === "saving" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"}`}>
@@ -151,7 +151,7 @@ export function ExamClient({
         </div>
       </section>
 
-      <section className="mb-5 rounded-lg bg-white p-4 shadow-md ring-1 ring-slate-200">
+      <section className="paper-card mb-5 rounded-2xl p-4">
         <div className="grid gap-3 border-b border-slate-200 pb-3 text-sm md:grid-cols-2">
           <div className="grid grid-cols-[120px_1fr] gap-2"><strong>Kelompok Soal</strong><span>{categoryName}</span></div>
           <div className="grid grid-cols-[120px_1fr] gap-2"><strong>Mata Pelajaran</strong><span>{topicName ?? (mode === "exam" ? "SIMULASI CPNS" : "LATIHAN TOPIK")}</span></div>
@@ -159,7 +159,7 @@ export function ExamClient({
         <div className="mt-3 grid grid-cols-[120px_1fr] gap-2 text-sm"><strong>Paket Soal</strong><span>{mode === "exam" ? "MODE TRYOUT" : "MODE LATIHAN"}</span></div>
       </section>
 
-      <article className="mb-5 rounded-lg bg-white p-4 shadow-md ring-1 ring-slate-200 sm:p-5">
+      <article className="paper-card mb-5 rounded-2xl p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 text-sm">
           <div>
             <span className="mr-2">Soal nomor</span>
@@ -180,12 +180,12 @@ export function ExamClient({
 
                 return (
                   <button
-                    className={`group flex w-full items-start gap-3 rounded-lg border bg-white p-2 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-50 ${selected ? "border-blue-600 bg-blue-50" : "border-slate-200"}`}
+                    className={`group flex w-full items-start gap-3 rounded-2xl border bg-white p-3 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50 ${selected ? "border-amber-500 bg-amber-50" : "border-slate-200"}`}
                     key={option.id}
                     onClick={() => chooseAnswer(activeItem.question.id, option.id)}
                     type="button"
                   >
-                    <span className={`grid size-[30px] shrink-0 place-items-center rounded border text-sm font-bold ${selected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-700 group-hover:border-blue-600"}`}>
+                    <span className={`grid size-[30px] shrink-0 place-items-center rounded-xl border text-sm font-bold ${selected ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-700 group-hover:border-amber-500"}`}>
                       {option.label}
                     </span>
                     <span className="option-text pt-0.5">
@@ -197,7 +197,7 @@ export function ExamClient({
         </div>
       </article>
 
-      <section className="sticky bottom-4 rounded-lg bg-white p-4 shadow-xl ring-1 ring-slate-200">
+      <section className="sticky bottom-4 rounded-3xl bg-white p-4 shadow-xl ring-1 ring-slate-200">
         <div className="mb-4 border-b border-slate-200 pb-3 text-sm">Jawaban Anda adalah <strong>{selectedLabel ?? "?"}</strong></div>
         <div className="grid gap-3 md:grid-cols-[1fr_1fr_160px]">
           <button
@@ -208,10 +208,10 @@ export function ExamClient({
           >
             <ChevronLeft className="size-4" /> Soal Sebelumnya
           </button>
-          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-3 font-bold text-white" onClick={isLastQuestion ? () => setShowFinishConfirm(true) : () => setActiveIndex((index) => Math.min(index + 1, questions.length - 1))} type="button">
+          <button className="primary-action inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 font-bold" onClick={isLastQuestion ? () => setShowFinishConfirm(true) : () => setActiveIndex((index) => Math.min(index + 1, questions.length - 1))} type="button">
             {isLastQuestion ? <Send className="size-4" /> : <ChevronRight className="size-4" />} {isLastQuestion ? "Selesai" : "Soal Berikutnya"}
           </button>
-          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 font-bold text-white" onClick={() => setShowFinishConfirm(true)} type="button">
+          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-3 font-bold text-white" onClick={() => setShowFinishConfirm(true)} type="button">
             <Send className="size-4" /> Selesai
           </button>
         </div>
