@@ -66,9 +66,9 @@ export default async function DashboardPage() {
     .slice(0, 3);
 
   return (
-    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="page-shell min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <MotionSection className="mx-auto flex w-full max-w-6xl flex-col gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <header className="glass-panel flex items-center justify-between rounded-[2rem] p-4">
+        <header className="nav-pill flex items-center justify-between rounded-[1.5rem] p-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
             <h1 className="mt-1 text-xl font-black sm:text-2xl">Halo, {fullName}</h1>
@@ -80,8 +80,8 @@ export default async function DashboardPage() {
           </form>
         </header>
 
-        <MotionDiv className="dark-glass rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <p className="text-sm font-semibold text-emerald-200">Ujian berikutnya</p>
+        <MotionDiv className="ink-card rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <p className="text-sm font-semibold text-amber-200">Ujian berikutnya</p>
           <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
             Mulai simulasi CAT CPNS atau latihan per topik.
           </h2>
@@ -90,10 +90,10 @@ export default async function DashboardPage() {
             pembahasan, dan status kelulusan berdasarkan ambang TWK, TIU, dan TKP.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href="/ujian" className="inline-flex justify-center rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+            <Link href="/ujian" className="primary-action inline-flex justify-center rounded-2xl px-5 py-4 font-black">
               Mulai Simulasi CAT
             </Link>
-            <Link href="/latihan" className="inline-flex justify-center rounded-2xl bg-emerald-500 px-5 py-4 font-black text-slate-950">
+            <Link href="/latihan" className="inline-flex justify-center rounded-2xl bg-white px-5 py-4 font-black text-slate-950">
               Latihan Topik
             </Link>
             <Link href="/riwayat" className="inline-flex justify-center rounded-2xl border border-white/20 px-5 py-4 font-black text-white hover:bg-white/10">
@@ -111,8 +111,8 @@ export default async function DashboardPage() {
           {quickStats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <MotionArticle whileHover={{ y: -6 }} className="glass-panel rounded-3xl p-5" key={stat.label}>
-                <Icon className="mb-5 size-6 text-emerald-700" />
+              <MotionArticle whileHover={{ y: -6 }} className="paper-card rounded-3xl p-5" key={stat.label}>
+                <Icon className="mb-5 size-6 text-amber-600" />
                 <p className="text-3xl font-black">{stat.value}</p>
                 <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
               </MotionArticle>
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
           })}
         </section>
 
-        <section className="glass-panel rounded-[2rem] p-5">
+        <section className="paper-card rounded-[2rem] p-5">
           <div className="flex items-center gap-2">
             <TrendingDown className="size-5 text-amber-600" />
             <h2 className="text-xl font-black">Fokus belajar</h2>

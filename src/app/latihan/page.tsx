@@ -62,9 +62,9 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
   const lowStockThreshold = practiceConfig?.low_stock_threshold ?? defaultQuestionCount;
 
   return (
-    <main className="exam-surface min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="page-shell min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+        <header className="paper-card rounded-[2rem] p-5">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">
             <ArrowLeft className="size-4" /> Kembali ke dashboard
           </Link>
@@ -87,7 +87,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
           </div>
         ) : null}
 
-        <section className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
+        <section className="ink-card rounded-[2rem] p-6 text-white">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-emerald-200">Mode ujian</p>
@@ -96,7 +96,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                 Ambil soal published dari TWK, TIU, dan TKP secara acak. Cocok untuk latihan rasa ujian tanpa memilih topik satu per satu.
               </p>
             </div>
-            <Link href="/ujian" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300 sm:w-auto">
+            <Link href="/ujian" className="primary-action inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 font-black sm:w-auto">
                 <ClipboardCheck className="size-5" /> Mulai Simulasi
             </Link>
           </div>
@@ -104,7 +104,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
 
         <div className="grid gap-5">
           {((categories ?? []) as Category[]).map((category) => (
-            <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" key={category.id}>
+            <article className="paper-card rounded-[2rem] p-5" key={category.id}>
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <span className="inline-flex rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
@@ -123,7 +123,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                   const lowStock = hasStock && stock < lowStockThreshold;
 
                   return (
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md" key={topic.id}>
+                    <div className="soft-card rounded-3xl p-4 transition hover:-translate-y-0.5 hover:shadow-md" key={topic.id}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-black">{topic.name}</h3>
@@ -131,7 +131,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                           {lowStock ? <p className="mt-1 text-xs font-black text-amber-700">Stok rendah</p> : null}
                         </div>
                         {hasStock ? (
-                          <BookOpenCheck className="size-5 text-emerald-700" />
+                          <BookOpenCheck className="size-5 text-amber-600" />
                         ) : (
                           <CircleAlert className="size-5 text-amber-600" />
                         )}
@@ -150,7 +150,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                               {!allowedQuestionCounts.some((count) => count <= stock) ? <option value={stock}>{stock} soal</option> : null}
                             </select>
                           </label>
-                          <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/10 hover:bg-emerald-800">
+                          <button className="primary-action inline-flex w-full justify-center rounded-2xl px-4 py-3 text-sm font-black">
                             Mulai topik ini
                           </button>
                         </form>

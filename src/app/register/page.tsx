@@ -10,24 +10,24 @@ export default async function RegisterPage({
   const { message } = await searchParams;
 
   return (
-    <main className="app-page grid min-h-screen place-items-center px-4 py-10">
-      <section className="grid w-full max-w-5xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl shadow-slate-900/10 lg:grid-cols-[0.9fr_1fr]">
-        <div className="hidden bg-slate-950 p-8 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="grid size-14 place-items-center rounded-3xl bg-emerald-400 text-slate-950">
+    <main className="page-shell grid min-h-screen place-items-center px-4 py-10">
+      <section className="grid w-full max-w-5xl overflow-hidden rounded-[2.5rem] lg:grid-cols-[0.9fr_1fr]">
+        <div className="ink-card hidden p-8 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="grid size-14 place-items-center rounded-3xl bg-amber-400 text-slate-950">
             <BookOpenCheck className="size-7" />
           </div>
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-200">Akun latihan</p>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-200">Akun latihan</p>
             <h2 className="mobile-title mt-4">Mulai catat skor dari sesi pertama.</h2>
             <p className="mt-4 text-sm font-semibold leading-7 text-slate-300">Satu akun untuk latihan topik, simulasi ujian, riwayat, dan pembahasan.</p>
           </div>
         </div>
-        <div className="p-6 sm:p-8">
+        <div className="paper-card rounded-[2.5rem] p-6 sm:p-8 lg:rounded-l-none">
         <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-black text-emerald-700">
+          <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-2 text-sm font-black text-slate-900 ring-1 ring-amber-200">
             <UserPlus className="size-4" /> CPNS Practice Web
           </Link>
-          <h1 className="mt-4 text-2xl font-bold text-slate-950">Buat akun</h1>
+          <h1 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Buat akun</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Akun digunakan untuk menyimpan sesi latihan, skor, dan riwayat pembahasan.
           </p>
@@ -40,8 +40,8 @@ export default async function RegisterPage({
         ) : null}
 
         <form action={loginWithGoogle}>
-          <button className="mb-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 font-black text-slate-800 shadow-sm transition hover:bg-slate-50" type="submit">
-            <span className="grid size-6 place-items-center rounded-full bg-slate-950 text-xs font-black text-white">G</span>
+          <button className="primary-action mb-4 flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-4 font-black transition" type="submit">
+            <span className="grid size-6 place-items-center rounded-full bg-slate-950 text-xs font-black text-white" aria-hidden="true">G</span>
             Daftar dengan Google
           </button>
         </form>
@@ -82,14 +82,14 @@ export default async function RegisterPage({
               required
             />
           </label>
-          <button className="w-full rounded-2xl bg-slate-950 px-5 py-4 font-black text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800">
+          <button className="w-full rounded-3xl bg-slate-950 px-5 py-4 font-black text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800">
             Daftar
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-600">
           Sudah punya akun?{" "}
-          <Link className="font-bold text-emerald-700" href="/login">
+          <Link className="font-bold text-amber-700" href="/login">
             Masuk
           </Link>
         </p>

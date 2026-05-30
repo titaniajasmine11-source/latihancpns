@@ -16,15 +16,15 @@ export default async function LoginPage({
   const { message } = await searchParams;
 
   return (
-    <main className="app-page min-h-screen overflow-hidden px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="page-shell min-h-screen overflow-hidden px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
       <section className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <aside className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-900/25 sm:p-8 lg:min-h-[680px]">
+        <aside className="ink-card relative overflow-hidden rounded-[2.5rem] p-6 text-white sm:p-8 lg:min-h-[680px]">
           <div className="absolute -right-24 -top-24 size-72 rounded-full bg-emerald-400/20 blur-3xl" />
           <div className="absolute -bottom-28 left-10 size-80 rounded-full bg-blue-500/20 blur-3xl" />
           <div className="relative flex h-full flex-col justify-between gap-10">
             <nav className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3">
-                <span className="grid size-12 place-items-center rounded-2xl bg-emerald-400 text-slate-950">
+                <span className="grid size-12 place-items-center rounded-2xl bg-amber-400 text-slate-950">
                   <BookOpenCheck className="size-6" />
                 </span>
                 <span>
@@ -32,13 +32,13 @@ export default async function LoginPage({
                   <span className="block text-xs font-bold text-slate-400">TWK, TIU, TKP</span>
                 </span>
               </Link>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black text-emerald-200">
+              <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black text-amber-200">
                 Secure login
               </span>
             </nav>
 
             <div>
-              <p className="inline-flex rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-black text-emerald-200 ring-1 ring-emerald-300/20">
+              <p className="inline-flex rounded-full bg-amber-300 px-3 py-1 text-sm font-black text-slate-950">
                 Akun belajar CPNS
               </p>
               <h1 className="mobile-title mt-6 max-w-xl">
@@ -50,7 +50,7 @@ export default async function LoginPage({
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {loginHighlights.map(({ Icon, label }) => (
                   <div className="rounded-3xl border border-white/10 bg-white/5 p-4" key={label}>
-                    <Icon className="mb-3 size-5 text-emerald-300" />
+                    <Icon className="mb-3 size-5 text-amber-300" />
                     <p className="text-sm font-black">{label}</p>
                   </div>
                 ))}
@@ -59,7 +59,7 @@ export default async function LoginPage({
 
             <div className="rounded-[2rem] border border-white/10 bg-white/5 p-4 backdrop-blur">
               <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-1 size-5 shrink-0 text-emerald-300" />
+                <CheckCircle2 className="mt-1 size-5 shrink-0 text-amber-300" />
                 <p className="text-sm font-semibold leading-6 text-slate-300">
                   Gunakan Google untuk akses paling cepat. Email/password tetap tersedia untuk admin dan akun manual.
                 </p>
@@ -68,9 +68,9 @@ export default async function LoginPage({
           </div>
         </aside>
 
-        <section className="rounded-[2.5rem] border border-white/70 bg-white/85 p-5 shadow-2xl shadow-slate-900/10 backdrop-blur sm:p-8">
+        <section className="paper-card rounded-[2.5rem] p-5 sm:p-8">
           <div className="mb-7">
-            <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 ring-1 ring-emerald-100">
+            <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-2 text-sm font-black text-slate-900 ring-1 ring-amber-200">
               <LockKeyhole className="size-4" /> Login area
             </Link>
             <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Masuk akun</h2>
@@ -86,8 +86,8 @@ export default async function LoginPage({
           ) : null}
 
           <form action={loginWithGoogle}>
-            <button className="group mb-5 flex w-full items-center justify-center gap-3 rounded-3xl bg-slate-950 px-5 py-4 font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800" type="submit">
-              <span className="grid size-7 place-items-center rounded-full bg-white text-sm font-black text-slate-950" aria-hidden="true">G</span>
+            <button className="primary-action group mb-5 flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-4 font-black transition hover:-translate-y-0.5" type="submit">
+              <span className="grid size-7 place-items-center rounded-full bg-slate-950 text-sm font-black text-white" aria-hidden="true">G</span>
               Masuk dengan Google
               <ArrowRight className="size-4 transition group-hover:translate-x-1" />
             </button>
@@ -120,14 +120,14 @@ export default async function LoginPage({
                 required
               />
             </label>
-            <button className="w-full rounded-3xl bg-emerald-600 px-5 py-4 font-black text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700" type="submit">
+            <button className="w-full rounded-3xl bg-slate-950 px-5 py-4 font-black text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800" type="submit">
               Masuk
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             Belum punya akun?{" "}
-            <Link className="font-bold text-emerald-700" href="/register">
+            <Link className="font-bold text-amber-700" href="/register">
               Daftar sekarang
             </Link>
           </p>
