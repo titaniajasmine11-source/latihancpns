@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { BookOpenCheck, Clock3, LogOut, Target } from "lucide-react";
+import { BookOpenCheck, Clock3, LogOut, Settings, Target, TrendingDown } from "lucide-react";
 import { logout } from "@/app/auth/actions";
 import { MotionArticle, MotionDiv, MotionSection } from "@/components/motion-primitives";
 import { createClient } from "@/lib/supabase/server";
@@ -12,11 +12,11 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
-  const fullName = user.user_metadata.full_name ?? user.email;
-  const [sessionsResult, scoresResult, topicsResult] = await Promise.all([
+  const fullName = user.user_metadata.full_name ?? user.email ?? "Pejuang CPNS";
+  const [sessionsResult, scoresResult, topicsResult, profileResult, categoryScoresResult] = await Promise.all([
     supabase
       .from("practice_sessions")
       .select("id", { count: "exact", head: true })
@@ -24,7 +24,14 @@ export default async function DashboardPage() {
       .eq("status", "finished"),
     supabase.from("score_results").select("total_score").eq("user_id", user.id),
     supabase.from("topics").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("score_results")
+      .select("total_score, answered_questions, categories(code, name)")
+      .eq("user_id", user.id)
+      .not("category_id", "is", null),
   ]);
+  const isAdmin = profileResult.data?.role === "admin";
 
   const scores = scoresResult.data ?? [];
   const averageScore = scores.length
@@ -35,9 +42,31 @@ export default async function DashboardPage() {
     { label: "Skor rata-rata", value: averageScore === null ? "-" : String(averageScore), icon: Target },
     { label: "Topik aktif", value: String(topicsResult.count ?? 0), icon: BookOpenCheck },
   ];
+  const categoryPerformance = new Map<string, { name: string; score: number; answered: number; sessions: number }>();
+
+  (categoryScoresResult.data ?? []).forEach((result) => {
+    const category = Array.isArray(result.categories) ? result.categories[0] : result.categories;
+    const code = category?.code ?? "CPNS";
+    const current = categoryPerformance.get(code) ?? { name: category?.name ?? code, score: 0, answered: 0, sessions: 0 };
+
+    categoryPerformance.set(code, {
+      name: current.name,
+      score: current.score + (result.total_score ?? 0),
+      answered: current.answered + (result.answered_questions ?? 0),
+      sessions: current.sessions + 1,
+    });
+  });
+  const weakestCategories = Array.from(categoryPerformance.entries())
+    .map(([code, item]) => ({
+      code,
+      ...item,
+      averagePerQuestion: item.answered ? item.score / item.answered : 0,
+    }))
+    .sort((a, b) => a.averagePerQuestion - b.averagePerQuestion)
+    .slice(0, 3);
 
   return (
-    <main className="min-h-screen aurora-bg px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <MotionSection className="mx-auto flex w-full max-w-6xl flex-col gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <header className="glass-panel flex items-center justify-between rounded-[2rem] p-4">
           <div>
@@ -70,6 +99,11 @@ export default async function DashboardPage() {
             <Link href="/riwayat" className="inline-flex justify-center rounded-2xl border border-white/20 px-5 py-4 font-black text-white hover:bg-white/10">
               Lihat Riwayat
             </Link>
+            {isAdmin ? (
+              <Link href="/admin" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 px-5 py-4 font-black text-emerald-100 hover:bg-white/10">
+                <Settings className="size-4" /> Admin
+              </Link>
+            ) : null}
           </div>
         </MotionDiv>
 
@@ -84,6 +118,30 @@ export default async function DashboardPage() {
               </MotionArticle>
             );
           })}
+        </section>
+
+        <section className="glass-panel rounded-[2rem] p-5">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="size-5 text-amber-600" />
+            <h2 className="text-xl font-black">Fokus belajar</h2>
+          </div>
+          {weakestCategories.length ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {weakestCategories.map((item) => (
+                <article className="rounded-3xl bg-white/70 p-4 ring-1 ring-slate-200" key={item.code}>
+                  <span className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">{item.code}</span>
+                  <h3 className="mt-4 font-black">{item.name}</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">
+                    Rata-rata {item.averagePerQuestion.toFixed(1)} poin/soal dari {item.sessions} sesi.
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm font-semibold text-slate-600">
+              Selesaikan beberapa latihan per topik untuk melihat kategori yang perlu diprioritaskan.
+            </p>
+          )}
         </section>
       </MotionSection>
     </main>

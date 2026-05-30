@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { GeneratedQuestion } from "@/lib/gemini/questions";
+import { parseAndValidateQuestions, type GeneratedQuestion } from "@/lib/gemini/questions";
 import { requireAdmin } from "@/lib/admin";
 
 export async function publishDraft(formData: FormData) {
@@ -29,6 +29,18 @@ export async function publishDraft(formData: FormData) {
 
   const questionJson = draft.question_json as GeneratedQuestion;
   const now = new Date().toISOString();
+
+  try {
+    parseAndValidateQuestions({
+      rawJson: JSON.stringify({ questions: [questionJson] }),
+      category: questionJson.category,
+      topic: questionJson.topic,
+      difficulty: questionJson.difficulty,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Format draft tidak valid";
+    redirect(`/admin/draft?message=${encodeURIComponent(message)}`);
+  }
 
   const { data: existing } = await supabase
     .from("questions")

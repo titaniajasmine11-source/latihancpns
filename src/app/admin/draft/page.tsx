@@ -26,7 +26,7 @@ export default async function AdminDraftPage({ searchParams }: { searchParams: P
     .limit(30);
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">
@@ -60,18 +60,21 @@ export default async function AdminDraftPage({ searchParams }: { searchParams: P
               const question = draft.question_json;
 
               return (
-                <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" key={draft.id}>
+                <article className="app-card rounded-[2rem] p-5" key={draft.id}>
                   <div className="mb-4 flex flex-wrap gap-2 text-xs font-black uppercase tracking-wide">
                     <span className="rounded-full bg-slate-950 px-2 py-1 text-white">{category?.code}</span>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{topic?.name}</span>
                     <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-800">{draft.status}</span>
                     <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-900">{draft.ai_model}</span>
                   </div>
-                  <h2 className="text-lg font-black leading-7">{question.question_text}</h2>
+                  <h2 className="text-xl font-black leading-8 tracking-[-0.01em]">{question.question_text}</h2>
                   <div className="mt-4 grid gap-2">
                     {question.options.map((option) => (
-                      <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${option.is_correct ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50"}`} key={option.label}>
-                        {option.label}. {option.text} <span className="text-xs">({option.score})</span>
+                      <div className={`flex items-start gap-3 rounded-3xl border p-4 ${option.is_correct ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white"}`} key={option.label}>
+                        <span className={`grid size-10 shrink-0 place-items-center rounded-2xl text-sm font-black ${option.is_correct ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700"}`}>
+                          {option.label}
+                        </span>
+                        <span className="pt-1 text-sm font-bold leading-6">{option.text} <span className="text-xs font-black text-slate-500">Skor {option.score}</span></span>
                       </div>
                     ))}
                   </div>

@@ -5,41 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 
 type SessionQuestion = {
   position: number;
-  questions:
-    | {
-    id: number;
-    question_text: string;
-    explanation: string | null;
-    categories: {
-      code: string;
-    } | {
-      code: string;
-    }[] | null;
-    question_options: {
-      id: number;
-      label: string;
-      option_text: string;
-      is_correct: boolean;
-      score: number;
-    }[];
-  }
+  question_id: number;
+  question_text: string;
+  explanation: string | null;
+  category_code: string | null;
+  topic_name: string | null;
+  options:
     | {
         id: number;
-        question_text: string;
-        explanation: string | null;
-        categories: {
-          code: string;
-        } | {
-          code: string;
-        }[] | null;
-        question_options: {
-          id: number;
-          label: string;
-          option_text: string;
-          is_correct: boolean;
-          score: number;
-        }[];
-      }[];
+        label: string;
+        option_text: string;
+        is_correct: boolean;
+        score: number;
+      }[]
+    | string;
 };
 
 type UserAnswer = {
@@ -62,12 +41,12 @@ export default async function ResultPage({ params }: { params: Promise<{ session
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { data: session, error: sessionError } = await supabase
     .from("practice_sessions")
-    .select("id, status, total_questions, total_score, categories(code, name), topics(name)")
+    .select("id, mode, status, total_questions, total_score, categories(code, name), topics(name)")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single();
@@ -82,10 +61,7 @@ export default async function ResultPage({ params }: { params: Promise<{ session
 
   const [{ data: sessionQuestions }, { data: answers }, { data: scoringSetting }] = await Promise.all([
     supabase
-      .from("session_questions")
-      .select("position, questions(id, question_text, explanation, categories(code), question_options(id, label, option_text, is_correct, score))")
-      .eq("session_id", sessionId)
-      .order("position", { ascending: true }),
+      .rpc("get_finished_session_review", { p_session_id: sessionId }),
     supabase
       .from("user_answers")
       .select("question_id, selected_option_id, score")
@@ -102,18 +78,24 @@ export default async function ResultPage({ params }: { params: Promise<{ session
   const category = Array.isArray(session.categories) ? session.categories[0] : session.categories;
   const topic = Array.isArray(session.topics) ? session.topics[0] : session.topics;
   const breakdown = new Map<string, { score: number; answered: number; total: number }>();
+  const topicBreakdown = new Map<string, { score: number; answered: number; total: number }>();
 
   ((sessionQuestions ?? []) as SessionQuestion[]).forEach((item) => {
-    const question = Array.isArray(item.questions) ? item.questions[0] : item.questions;
-    const questionCategory = Array.isArray(question.categories) ? question.categories[0] : question.categories;
-    const code = questionCategory?.code ?? "CPNS";
-    const answer = answerByQuestion.get(question.id);
+    const code = item.category_code ?? "CPNS";
+    const topicKey = `${code} - ${item.topic_name ?? "Tanpa topik"}`;
+    const answer = answerByQuestion.get(item.question_id);
     const current = breakdown.get(code) ?? { score: 0, answered: 0, total: 0 };
+    const currentTopic = topicBreakdown.get(topicKey) ?? { score: 0, answered: 0, total: 0 };
 
     breakdown.set(code, {
       score: current.score + (answer?.score ?? 0),
       answered: current.answered + (answer ? 1 : 0),
       total: current.total + 1,
+    });
+    topicBreakdown.set(topicKey, {
+      score: currentTopic.score + (answer?.score ?? 0),
+      answered: currentTopic.answered + (answer ? 1 : 0),
+      total: currentTopic.total + 1,
     });
   });
 
@@ -132,10 +114,20 @@ export default async function ResultPage({ params }: { params: Promise<{ session
       passed: passingGrade ? item.score >= passingGrade : true,
     };
   });
-  const finalPassed = categoryStatuses.length > 0 && categoryStatuses.every((item) => item.passed);
+  const isExam = session.mode === "exam";
+  const finalPassed = isExam && categoryStatuses.length > 0 && categoryStatuses.every((item) => item.passed);
+  const weakestTopics = Array.from(topicBreakdown.entries())
+    .map(([name, item]) => ({
+      name,
+      ...item,
+      average: item.total ? item.score / item.total : 0,
+      completion: item.total ? item.answered / item.total : 0,
+    }))
+    .sort((a, b) => a.average - b.average || a.completion - b.completion)
+    .slice(0, 3);
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         <header className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-200">
@@ -155,15 +147,25 @@ export default async function ResultPage({ params }: { params: Promise<{ session
           </div>
         </header>
 
-        <section className={`rounded-[2rem] border p-5 shadow-sm ${finalPassed ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}>
-          <p className="text-sm font-black uppercase tracking-wide">Status akhir</p>
-          <h2 className="mt-2 text-3xl font-black">{finalPassed ? "Lulus simulasi" : "Belum lulus simulasi"}</h2>
-          <p className="mt-2 text-sm font-semibold leading-6">
-            {finalPassed
-              ? "Semua kategori memenuhi ambang batas yang aktif di settings."
-              : "Minimal satu kategori belum memenuhi ambang batas. Gunakan pembahasan untuk memperbaiki area lemah."}
-          </p>
-        </section>
+        {isExam ? (
+          <section className={`rounded-[2rem] border p-5 shadow-sm ${finalPassed ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}>
+            <p className="text-sm font-black uppercase tracking-wide">Status akhir</p>
+            <h2 className="mt-2 text-3xl font-black">{finalPassed ? "Lulus simulasi" : "Belum lulus simulasi"}</h2>
+            <p className="mt-2 text-sm font-semibold leading-6">
+              {finalPassed
+                ? "Semua kategori memenuhi ambang batas yang aktif di settings."
+                : "Minimal satu kategori belum memenuhi ambang batas. Gunakan pembahasan untuk memperbaiki area lemah."}
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-wide">Ringkasan latihan</p>
+            <h2 className="mt-2 text-3xl font-black">Latihan selesai</h2>
+            <p className="mt-2 text-sm font-semibold leading-6">
+              Gunakan pembahasan di bawah untuk mengecek jawaban dan memperbaiki topik yang masih lemah.
+            </p>
+          </section>
+        )}
 
         <section className="grid gap-3 sm:grid-cols-3">
           {Array.from(breakdown.entries()).map(([code, item]) => {
@@ -190,51 +192,86 @@ export default async function ResultPage({ params }: { params: Promise<{ session
           })}
         </section>
 
+        {weakestTopics.length ? (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-wide text-emerald-700">Analisis kelemahan</p>
+            <h2 className="mt-2 text-2xl font-black">Prioritas belajar berikutnya</h2>
+            <div className="mt-4 grid gap-3">
+              {weakestTopics.map((item) => (
+                <article className="rounded-3xl bg-slate-50 p-4" key={item.name}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-black">{item.name}</h3>
+                    <span className="rounded-2xl bg-white px-3 py-2 text-sm font-black text-slate-700 ring-1 ring-slate-200">
+                      {item.answered}/{item.total} dijawab
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">
+                    Rata-rata skor per soal: {item.average.toFixed(1)}. Ulangi topik ini untuk menaikkan konsistensi.
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {((sessionQuestions ?? []) as SessionQuestion[]).map((item) => {
-          const question = Array.isArray(item.questions) ? item.questions[0] : item.questions;
-          const questionCategory = Array.isArray(question.categories) ? question.categories[0] : question.categories;
-          const answer = answerByQuestion.get(question.id);
-          const selectedOption = question.question_options.find((option) => option.id === answer?.selected_option_id);
+          const options = parseOptions(item.options);
+          const answer = answerByQuestion.get(item.question_id);
+          const selectedOption = options.find((option) => option.id === answer?.selected_option_id);
 
           return (
-            <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" key={question.id}>
+            <article className="question-card rounded-[2rem] p-5 sm:p-6" key={item.question_id}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <span className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
-                  {questionCategory?.code ?? "CPNS"} - Soal {item.position}
+                  {item.category_code ?? "CPNS"} - Soal {item.position}
                 </span>
                 <span className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">
                   +{answer?.score ?? 0}
                 </span>
               </div>
-              <p className="text-lg font-bold leading-8">{question.question_text}</p>
-              <div className="mt-5 space-y-3">
-                {question.question_options
-                  .sort((a, b) => a.label.localeCompare(b.label))
-                  .map((option) => {
-                    const selected = selectedOption?.id === option.id;
-                    const correct = option.is_correct;
+              <p className="text-base font-bold leading-7 text-slate-950">{item.question_text}</p>
+              <details className="group mt-3" open={item.position === 1}>
+                <summary className="cursor-pointer list-none rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 group-open:bg-slate-950 group-open:text-white">
+                  Lihat opsi dan pembahasan
+                </summary>
+                <div className="mt-5">
+                  <p className="question-text text-slate-950">{item.question_text}</p>
+                  <div className="mt-5 space-y-3">
+                    {options
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((option) => {
+                        const selected = selectedOption?.id === option.id;
+                        const correct = option.is_correct;
 
-                    return (
-                      <div
-                        className={`rounded-2xl border p-4 text-sm font-semibold ${
-                          correct
-                            ? "border-emerald-500 bg-emerald-50 text-emerald-900"
-                            : selected
-                              ? "border-amber-400 bg-amber-50 text-amber-900"
-                              : "border-slate-200 bg-slate-50 text-slate-700"
-                        }`}
-                        key={option.id}
-                      >
-                        {option.label}. {option.option_text}
-                        {selected ? " - Jawaban Anda" : ""}
-                      </div>
-                    );
-                  })}
-              </div>
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm font-black text-slate-900">Pembahasan</p>
-                <p className="mt-2 text-sm leading-6 text-slate-700">{question.explanation}</p>
-              </div>
+                        return (
+                          <div
+                            className={`flex items-start gap-4 rounded-3xl border p-4 sm:p-5 ${
+                              correct
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+                                : selected
+                                  ? "border-red-300 bg-red-50 text-red-900"
+                                  : "border-slate-200 bg-slate-50 text-slate-700"
+                            }`}
+                            key={option.id}
+                          >
+                            <span className={`grid size-11 shrink-0 place-items-center rounded-2xl text-base font-black ${correct ? "bg-emerald-700 text-white" : selected ? "bg-red-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                              {option.label}
+                            </span>
+                            <span className="option-text pt-2">
+                              {option.option_text}
+                              {correct ? <span className="ml-2 text-sm font-black">Jawaban terbaik</span> : null}
+                              {selected ? <span className="ml-2 text-sm font-black">Jawaban Anda</span> : null}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                    <p className="text-sm font-black text-slate-900">Pembahasan</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">{item.explanation}</p>
+                  </div>
+                </div>
+              </details>
             </article>
           );
         })}
@@ -245,4 +282,12 @@ export default async function ResultPage({ params }: { params: Promise<{ session
       </section>
     </main>
   );
+}
+
+function parseOptions(options: SessionQuestion["options"]): Exclude<SessionQuestion["options"], string> {
+  if (typeof options === "string") {
+    return JSON.parse(options) as Exclude<SessionQuestion["options"], string>;
+  }
+
+  return options;
 }

@@ -63,7 +63,7 @@ export default async function AdminQuestionDetailPage({
   const optionByLabel = new Map(typedQuestion.question_options.map((option) => [option.label, option]));
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto w-full max-w-4xl space-y-5">
         <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <Link href="/admin/soal" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">
@@ -81,7 +81,7 @@ export default async function AdminQuestionDetailPage({
           </div>
         ) : null}
 
-        <form action={updateQuestion} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <form action={updateQuestion} className="app-card space-y-4 rounded-[2rem] p-5">
           <input type="hidden" name="question_id" value={typedQuestion.id} />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">

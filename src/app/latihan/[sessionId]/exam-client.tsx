@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, List, Send } from "lucide-react";
 import { finishPractice, saveAnswer } from "@/app/latihan/actions";
 
 type ExamQuestion = {
@@ -13,7 +13,6 @@ type ExamQuestion = {
       id: number;
       label: string;
       option_text: string;
-      score: number;
     }[];
   };
 };
@@ -23,16 +22,26 @@ export function ExamClient({
   expiresAt,
   questions,
   initialAnswers,
+  categoryName = "CPNS / CASN",
+  topicName,
+  mode = "exam",
 }: {
   sessionId: string;
   expiresAt: string | null;
   questions: ExamQuestion[];
   initialAnswers: Record<number, number>;
+  categoryName?: string;
+  topicName?: string;
+  mode?: "practice" | "exam";
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [answers, setAnswers] = useState(initialAnswers);
   const [remainingSeconds, setRemainingSeconds] = useState(() => getRemainingSeconds(expiresAt));
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const [showQuestionList, setShowQuestionList] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const activeItem = questions[activeIndex];
+  const isLastQuestion = activeIndex === questions.length - 1;
 
   useEffect(() => {
     if (!expiresAt) {
@@ -76,6 +85,8 @@ export function ExamClient({
 
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const progress = Math.round((answeredCount / Math.max(questions.length, 1)) * 100);
+  const selectedAnswer = answers[activeItem?.question.id];
+  const selectedLabel = activeItem?.question.question_options.find((option) => option.id === selectedAnswer)?.label;
 
   if (!activeItem) {
     return null;
@@ -83,106 +94,146 @@ export function ExamClient({
 
   async function chooseAnswer(questionId: number, optionId: number) {
     setAnswers((current) => ({ ...current, [questionId]: optionId }));
+    setSaveState("saving");
     const formData = new FormData();
     formData.set("session_id", sessionId);
     formData.set("question_id", String(questionId));
     formData.set("selected_option_id", String(optionId));
-    await saveAnswer(formData);
+    try {
+      await saveAnswer(formData);
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    }
+  }
+
+  async function finishSession() {
+    const formData = new FormData();
+    formData.set("session_id", sessionId);
+    await finishPractice(formData);
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-      <section className="flex flex-col gap-5">
-        <header className="sticky top-3 z-10 rounded-[2rem] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-600">Simulasi ujian resmi</p>
-              <h1 className="text-2xl font-black">Soal {activeItem.position}</h1>
-            </div>
-            <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black ${remainingSeconds <= 300 ? "bg-red-50 text-red-700" : "bg-slate-950 text-white"}`}>
-              <Clock3 className="size-4" /> {formatTime(remainingSeconds)}
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-3 text-sm font-black text-slate-600">
-            <span>{answeredCount}/{questions.length} dijawab</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress}%` }} />
-          </div>
-        </header>
+    <div className="mx-auto w-full max-w-4xl">
+      <section className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+          MODE <span className="text-orange-500">TRYOUT</span>
+        </h1>
+        <button aria-expanded={showQuestionList} aria-label="Tampilkan daftar nomor soal" className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-3 py-2 font-bold text-blue-700 shadow-sm" onClick={() => setShowQuestionList((value) => !value)} type="button">
+          <List className="size-5" /> <span className="hidden sm:inline">Nomor Soal</span> <ChevronDown className={`size-4 transition ${showQuestionList ? "rotate-180" : ""}`} />
+        </button>
+      </section>
 
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-lg font-bold leading-8">{activeItem.question.question_text}</p>
-          <div className="mt-5 space-y-3">
-            {activeItem.question.question_options
+      {showQuestionList ? (
+        <section className="mb-5 grid grid-cols-5 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-8 md:grid-cols-10">
+          {questions.map((item, index) => {
+            const answered = answers[item.question.id];
+            const active = index === activeIndex;
+
+            return (
+              <button className={`rounded-lg border px-3 py-2 text-sm font-bold shadow-sm ${active ? "border-blue-700 bg-blue-700 text-white" : answered ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-blue-200 bg-white text-blue-700"}`} key={item.question.id} onClick={() => setActiveIndex(index)} type="button">
+                {item.position}
+              </button>
+            );
+          })}
+        </section>
+      ) : null}
+
+      <section className={`mb-5 rounded-lg border bg-white p-4 text-sm font-medium text-slate-700 ${remainingSeconds > 0 && remainingSeconds <= 300 ? "border-red-500" : "border-blue-200"}`}>
+        <p>Progress jawaban tersimpan otomatis. Selesaikan sesi setelah semua soal terjawab.</p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+          <span className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white">{answeredCount}/{questions.length} dijawab</span>
+          {expiresAt ? <span className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs font-bold ${remainingSeconds <= 300 ? "bg-red-100 text-red-700" : "bg-slate-950 text-white"}`}><Clock3 className="size-3.5" /> {formatTime(remainingSeconds)}</span> : null}
+          <span className="rounded-full bg-emerald-100 px-4 py-1.5 text-xs font-bold text-emerald-800">{progress}%</span>
+          <span className={`rounded-full px-4 py-1.5 text-xs font-bold ${saveState === "error" ? "bg-red-100 text-red-700" : saveState === "saving" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"}`}>
+            {saveState === "saving" ? "Menyimpan..." : saveState === "error" ? "Gagal menyimpan" : saveState === "saved" ? "Tersimpan" : "Autosave aktif"}
+          </span>
+        </div>
+      </section>
+
+      <section className="mb-5 rounded-lg bg-white p-4 shadow-md ring-1 ring-slate-200">
+        <div className="grid gap-3 border-b border-slate-200 pb-3 text-sm md:grid-cols-2">
+          <div className="grid grid-cols-[120px_1fr] gap-2"><strong>Kelompok Soal</strong><span>{categoryName}</span></div>
+          <div className="grid grid-cols-[120px_1fr] gap-2"><strong>Mata Pelajaran</strong><span>{topicName ?? (mode === "exam" ? "SIMULASI CPNS" : "LATIHAN TOPIK")}</span></div>
+        </div>
+        <div className="mt-3 grid grid-cols-[120px_1fr] gap-2 text-sm"><strong>Paket Soal</strong><span>{mode === "exam" ? "MODE TRYOUT" : "MODE LATIHAN"}</span></div>
+      </section>
+
+      <article className="mb-5 rounded-lg bg-white p-4 shadow-md ring-1 ring-slate-200 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 text-sm">
+          <div>
+            <span className="mr-2">Soal nomor</span>
+            <select className="rounded-full border border-slate-300 px-2 py-1" onChange={(event) => setActiveIndex(Number(event.target.value))} value={activeIndex}>
+              {questions.map((item, index) => <option key={item.question.id} value={index}>{item.position}</option>)}
+            </select>
+            <span className="mx-2">/</span><span className="rounded-full border border-slate-300 px-3 py-1">{questions.length}</span>
+          </div>
+          <span className="font-bold text-slate-500">{answeredCount}/{questions.length} dijawab</span>
+        </div>
+        <p className="question-text text-slate-950">{activeItem.question.question_text}</p>
+        <div className="mt-6 flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="size-4" /><em>Pilih jawaban berikut:</em></div>
+        <div className="mt-4 space-y-3">
+            {[...activeItem.question.question_options]
               .sort((a, b) => a.label.localeCompare(b.label))
               .map((option) => {
                 const selected = answers[activeItem.question.id] === option.id;
 
                 return (
                   <button
-                    className={`w-full rounded-2xl border p-4 text-left font-semibold transition ${selected ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 hover:border-slate-400"}`}
+                    className={`group flex w-full items-start gap-3 rounded-lg border bg-white p-2 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-50 ${selected ? "border-blue-600 bg-blue-50" : "border-slate-200"}`}
                     key={option.id}
                     onClick={() => chooseAnswer(activeItem.question.id, option.id)}
                     type="button"
                   >
-                    {option.label}. {option.option_text}
+                    <span className={`grid size-[30px] shrink-0 place-items-center rounded border text-sm font-bold ${selected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-700 group-hover:border-blue-600"}`}>
+                      {option.label}
+                    </span>
+                    <span className="option-text pt-0.5">
+                      {option.option_text}
+                    </span>
                   </button>
                 );
               })}
-          </div>
-        </article>
+        </div>
+      </article>
 
-        <div className="sticky bottom-4 grid grid-cols-2 gap-3 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/10">
+      <section className="sticky bottom-4 rounded-lg bg-white p-4 shadow-xl ring-1 ring-slate-200">
+        <div className="mb-4 border-b border-slate-200 pb-3 text-sm">Jawaban Anda adalah <strong>{selectedLabel ?? "?"}</strong></div>
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_160px]">
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 py-4 font-black text-slate-700 disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-3 font-bold text-slate-700 disabled:opacity-40"
             disabled={activeIndex === 0}
             onClick={() => setActiveIndex((index) => Math.max(index - 1, 0))}
             type="button"
           >
-            <ChevronLeft className="size-4" /> Sebelumnya
+            <ChevronLeft className="size-4" /> Soal Sebelumnya
           </button>
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 font-black text-white disabled:opacity-40"
-            disabled={activeIndex === questions.length - 1}
-            onClick={() => setActiveIndex((index) => Math.min(index + 1, questions.length - 1))}
-            type="button"
-          >
-            Lanjut <ChevronRight className="size-4" />
+          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-3 font-bold text-white" onClick={isLastQuestion ? () => setShowFinishConfirm(true) : () => setActiveIndex((index) => Math.min(index + 1, questions.length - 1))} type="button">
+            {isLastQuestion ? <Send className="size-4" /> : <ChevronRight className="size-4" />} {isLastQuestion ? "Selesai" : "Soal Berikutnya"}
+          </button>
+          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 font-bold text-white" onClick={() => setShowFinishConfirm(true)} type="button">
+            <Send className="size-4" /> Selesai
           </button>
         </div>
       </section>
-
-      <aside className="h-fit rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-5">
-        <h2 className="text-xl font-black">Nomor soal</h2>
-        <div className="mt-4 grid grid-cols-5 gap-2 lg:grid-cols-4">
-          {questions.map((item, index) => {
-            const answered = answers[item.question.id];
-            const active = index === activeIndex;
-
-            return (
-              <button
-                className={`grid aspect-square place-items-center rounded-2xl text-sm font-black ${active ? "bg-slate-950 text-white" : answered ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}
-                key={item.question.id}
-                onClick={() => setActiveIndex(index)}
-                type="button"
-              >
-                {item.position}
+      {showFinishConfirm ? (
+        <div className="fixed inset-0 z-[60] grid items-end bg-slate-950/40 px-4 pb-4 backdrop-blur-sm sm:place-items-center sm:p-4">
+          <div className="w-full max-w-md rounded-[1.75rem] bg-white p-5 shadow-2xl shadow-slate-950/20">
+            <h2 className="text-xl font-bold text-slate-950">Selesaikan latihan?</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+              Jawaban yang belum diisi akan dihitung kosong. Setelah selesai, pembahasan langsung terbuka.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button className="rounded-2xl border border-slate-200 px-4 py-3 font-bold text-slate-700" onClick={() => setShowFinishConfirm(false)} type="button">
+                Lanjut mengerjakan
               </button>
-            );
-          })}
+              <button className="rounded-2xl bg-emerald-700 px-4 py-3 font-bold text-white" onClick={finishSession} type="button">
+                Ya, selesaikan
+              </button>
+            </div>
+          </div>
         </div>
-        <form action={finishPractice} className="mt-5">
-          <input type="hidden" name="session_id" value={sessionId} />
-          <button className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-4 font-black text-white hover:bg-emerald-800">
-            <Send className="size-4" /> Submit ujian
-          </button>
-        </form>
-        <p className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-slate-500">
-          <CheckCircle2 className="size-4 text-emerald-700" /> Jawaban tersimpan otomatis saat dipilih.
-        </p>
-      </aside>
+      ) : null}
     </div>
   );
 }

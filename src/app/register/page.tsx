@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { register } from "@/app/auth/actions";
+import { BookOpenCheck, UserPlus } from "lucide-react";
+import { loginWithGoogle, register } from "@/app/auth/actions";
 
 export default async function RegisterPage({
   searchParams,
@@ -9,13 +10,24 @@ export default async function RegisterPage({
   const { message } = await searchParams;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#f5f0e8] px-4 py-10">
-      <section className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/10">
+    <main className="app-page grid min-h-screen place-items-center px-4 py-10">
+      <section className="grid w-full max-w-5xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl shadow-slate-900/10 lg:grid-cols-[0.9fr_1fr]">
+        <div className="hidden bg-slate-950 p-8 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="grid size-14 place-items-center rounded-3xl bg-emerald-400 text-slate-950">
+            <BookOpenCheck className="size-7" />
+          </div>
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-200">Akun latihan</p>
+            <h2 className="mobile-title mt-4">Mulai catat skor dari sesi pertama.</h2>
+            <p className="mt-4 text-sm font-semibold leading-7 text-slate-300">Satu akun untuk latihan topik, simulasi ujian, riwayat, dan pembahasan.</p>
+          </div>
+        </div>
+        <div className="p-6 sm:p-8">
         <div className="mb-8">
-          <Link href="/" className="text-sm font-bold text-emerald-700">
-            CPNS Practice Web
+          <Link href="/" className="inline-flex items-center gap-2 text-sm font-black text-emerald-700">
+            <UserPlus className="size-4" /> CPNS Practice Web
           </Link>
-          <h1 className="mt-4 text-3xl font-black text-slate-950">Buat akun</h1>
+          <h1 className="mt-4 text-2xl font-bold text-slate-950">Buat akun</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Akun digunakan untuk menyimpan sesi latihan, skor, dan riwayat pembahasan.
           </p>
@@ -27,11 +39,22 @@ export default async function RegisterPage({
           </div>
         ) : null}
 
+        <form action={loginWithGoogle}>
+          <button className="mb-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 font-black text-slate-800 shadow-sm transition hover:bg-slate-50" type="submit">
+            <span className="grid size-6 place-items-center rounded-full bg-slate-950 text-xs font-black text-white">G</span>
+            Daftar dengan Google
+          </button>
+        </form>
+
+        <div className="mb-4 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" /> atau email <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
         <form action={register} className="space-y-4">
           <label className="block">
             <span className="text-sm font-bold text-slate-800">Nama lengkap</span>
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              className="app-input mt-2 w-full rounded-2xl px-4 py-4"
               name="full_name"
               type="text"
               autoComplete="name"
@@ -41,7 +64,7 @@ export default async function RegisterPage({
           <label className="block">
             <span className="text-sm font-bold text-slate-800">Email</span>
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              className="app-input mt-2 w-full rounded-2xl px-4 py-4"
               name="email"
               type="email"
               autoComplete="email"
@@ -51,7 +74,7 @@ export default async function RegisterPage({
           <label className="block">
             <span className="text-sm font-bold text-slate-800">Password</span>
             <input
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              className="app-input mt-2 w-full rounded-2xl px-4 py-4"
               name="password"
               type="password"
               autoComplete="new-password"
@@ -59,7 +82,7 @@ export default async function RegisterPage({
               required
             />
           </label>
-          <button className="w-full rounded-2xl bg-emerald-700 px-5 py-4 font-black text-white transition hover:bg-emerald-800">
+          <button className="w-full rounded-2xl bg-slate-950 px-5 py-4 font-black text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800">
             Daftar
           </button>
         </form>
@@ -70,6 +93,7 @@ export default async function RegisterPage({
             Masuk
           </Link>
         </p>
+        </div>
       </section>
     </main>
   );

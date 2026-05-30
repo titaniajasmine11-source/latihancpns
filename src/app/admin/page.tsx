@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bot, ClipboardList, FileCheck2, Layers3, Settings, TriangleAlert } from "lucide-react";
+import { generateQuestionDrafts } from "@/app/admin/generator/actions";
 import { requireAdmin } from "@/lib/admin";
 
 const adminMenus = [
@@ -32,16 +33,17 @@ const adminMenus = [
 export default async function AdminPage() {
   const { supabase } = await requireAdmin();
 
-  const [totalQuestions, publishedQuestions, draftAi, categoriesResult, lowStockTopics, latestJobs] = await Promise.all([
+  const [totalQuestions, publishedQuestions, draftAi, categoriesResult, topicsResult, publishedStock, practiceSetting, latestJobs] = await Promise.all([
     supabase.from("questions").select("id", { count: "exact", head: true }),
     supabase.from("questions").select("id", { count: "exact", head: true }).eq("status", "published"),
     supabase.from("question_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
     supabase.from("categories").select("id, code, questions(id)"),
     supabase
       .from("topics")
-      .select("id, name, categories(code), questions(id)")
-      .eq("questions.status", "published")
-      .limit(12),
+      .select("id, name, is_active, categories(id, code)")
+      .eq("is_active", true),
+    supabase.from("questions").select("topic_id").eq("status", "published"),
+    supabase.from("app_settings").select("value").eq("key", "practice").maybeSingle(),
     supabase
       .from("generation_jobs")
       .select("id, status, requested_count, error_message, created_at, categories(code), topics(name)")
@@ -61,21 +63,33 @@ export default async function AdminPage() {
     count: Array.isArray(category.questions) ? category.questions.length : 0,
   }));
 
-  const lowStock = (lowStockTopics.data ?? [])
+  const practiceConfig = practiceSetting.data?.value as { low_stock_threshold?: number; default_question_count?: number } | null;
+  const lowStockThreshold = practiceConfig?.low_stock_threshold ?? practiceConfig?.default_question_count ?? 10;
+  const stockByTopic = new Map<number, number>();
+
+  (publishedStock.data ?? []).forEach((question) => {
+    if (question.topic_id) {
+      stockByTopic.set(question.topic_id, (stockByTopic.get(question.topic_id) ?? 0) + 1);
+    }
+  });
+
+  const lowStock = (topicsResult.data ?? [])
     .map((topic) => {
       const category = Array.isArray(topic.categories) ? topic.categories[0] : topic.categories;
       return {
         id: topic.id,
+        categoryId: category?.id,
         name: topic.name,
         code: category?.code ?? "CPNS",
-        count: Array.isArray(topic.questions) ? topic.questions.length : 0,
+        count: stockByTopic.get(topic.id) ?? 0,
       };
     })
-    .filter((topic) => topic.count < 5)
+    .filter((topic) => topic.count < lowStockThreshold)
+    .sort((a, b) => a.count - b.count)
     .slice(0, 6);
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10">
           <Link href="/dashboard" className="text-sm font-bold text-emerald-200">
@@ -120,11 +134,27 @@ export default async function AdminPage() {
             </div>
             <div className="mt-4 grid gap-3">
               {lowStock.length ? lowStock.map((topic) => (
-                <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3" key={topic.id}>
-                  <span className="font-bold">{topic.code} - {topic.name}</span>
-                  <span className="font-black text-amber-800">{topic.count}</span>
+                <div className="rounded-2xl bg-amber-50 px-4 py-3" key={topic.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold">{topic.code} - {topic.name}</span>
+                    <span className="font-black text-amber-800">{topic.count}</span>
+                  </div>
+                  {topic.categoryId ? (
+                    <form action={generateQuestionDrafts} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input type="hidden" name="category_id" value={topic.categoryId} />
+                      <input type="hidden" name="topic_id" value={topic.id} />
+                      <input type="hidden" name="difficulty" value="sedang" />
+                      <input type="hidden" name="requested_count" value="3" />
+                      <Link href="/admin/generator" className="inline-flex justify-center rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200">
+                        Atur manual
+                      </Link>
+                      <button className="rounded-2xl bg-emerald-700 px-3 py-2 text-xs font-black text-white hover:bg-emerald-800">
+                        Generate 3 draft
+                      </button>
+                    </form>
+                  ) : null}
                 </div>
-              )) : <p className="text-sm font-semibold text-slate-600">Tidak ada topik stok rendah pada sampel terbaru.</p>}
+              )) : <p className="text-sm font-semibold text-slate-600">Tidak ada topik di bawah ambang stok {lowStockThreshold} soal.</p>}
             </div>
           </article>
         </section>

@@ -17,7 +17,7 @@ export default async function ExamInstructionPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { data: practiceSetting } = await supabase
@@ -31,7 +31,7 @@ export default async function ExamInstructionPage() {
   const duration = practice?.exam_duration_minutes ?? 100;
 
   return (
-    <main className="min-h-screen aurora-bg px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="app-page min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <MotionSection className="mx-auto flex w-full max-w-5xl flex-col gap-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <MotionDiv className="dark-glass rounded-[2.4rem] p-6 text-white" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           <p className="text-sm font-semibold text-emerald-200">Instruksi ujian</p>

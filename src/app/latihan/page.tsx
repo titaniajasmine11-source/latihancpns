@@ -24,6 +24,7 @@ type QuestionStock = {
 type PracticeSetting = {
   default_question_count?: number;
   allowed_question_counts?: number[];
+  low_stock_threshold?: number;
 };
 
 export default async function PracticePickerPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
@@ -34,7 +35,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   const [{ data: categories, error: categoriesError }, { data: questionStock }, { data: practiceSetting }] = await Promise.all([
@@ -58,9 +59,10 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
   const practiceConfig = practiceSetting?.value as PracticeSetting | null;
   const allowedQuestionCounts = practiceConfig?.allowed_question_counts?.length ? practiceConfig.allowed_question_counts : [5, 10, 20];
   const defaultQuestionCount = practiceConfig?.default_question_count ?? 10;
+  const lowStockThreshold = practiceConfig?.low_stock_threshold ?? defaultQuestionCount;
 
   return (
-    <main className="min-h-screen bg-[#f5f0e8] px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
+    <main className="exam-surface min-h-screen px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-6 lg:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700">
@@ -73,8 +75,8 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                 Kategori dan topik CPNS
               </h1>
             </div>
-            <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-              MVP: sesi latihan akan memakai soal published.
+            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900 ring-1 ring-emerald-100">
+              Soal diacak, jawaban otomatis tersimpan.
             </div>
           </div>
         </header>
@@ -118,13 +120,15 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                 {category.topics.filter((topic) => topic.is_active !== false).map((topic) => {
                   const stock = stockByTopic.get(topic.id) ?? 0;
                   const hasStock = stock > 0;
+                  const lowStock = hasStock && stock < lowStockThreshold;
 
                   return (
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4" key={topic.id}>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md" key={topic.id}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-black">{topic.name}</h3>
-                          <p className="mt-1 text-sm text-slate-600">{stock} soal published</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-600">{stock} soal siap latihan</p>
+                          {lowStock ? <p className="mt-1 text-xs font-black text-amber-700">Stok rendah</p> : null}
                         </div>
                         {hasStock ? (
                           <BookOpenCheck className="size-5 text-emerald-700" />
@@ -137,7 +141,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                           <input type="hidden" name="topic_id" value={topic.id} />
                           <label className="mb-3 block">
                             <span className="text-xs font-black uppercase tracking-wide text-slate-500">Jumlah soal</span>
-                            <select className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold" name="question_count" defaultValue={Math.min(stock, defaultQuestionCount)}>
+                            <select className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" name="question_count" defaultValue={Math.min(stock, defaultQuestionCount)}>
                               {allowedQuestionCounts
                                 .filter((count) => count <= stock)
                                 .map((count) => (
@@ -146,7 +150,7 @@ export default async function PracticePickerPage({ searchParams }: { searchParam
                               {!allowedQuestionCounts.some((count) => count <= stock) ? <option value={stock}>{stock} soal</option> : null}
                             </select>
                           </label>
-                          <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-800">
+                          <button className="inline-flex w-full justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/10 hover:bg-emerald-800">
                             Mulai topik ini
                           </button>
                         </form>

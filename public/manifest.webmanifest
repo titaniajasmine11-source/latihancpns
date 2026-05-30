@@ -1,0 +1,20 @@
+{
+  "name": "Latihan CPNS",
+  "short_name": "CPNS",
+  "description": "Aplikasi latihan CPNS mobile-first dengan simulasi ujian, skor, dan pembahasan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

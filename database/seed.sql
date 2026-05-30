@@ -39,7 +39,7 @@ on conflict (category_id, slug) do update set name = excluded.name;
 
 insert into app_settings (key, value) values
   ('scoring', '{"TWK":{"correct":5,"wrong":0,"passing_grade":65},"TIU":{"correct":5,"wrong":0,"passing_grade":80},"TKP":{"min":1,"max":5,"passing_grade":166}}'),
-  ('practice', '{"default_question_count":10,"allowed_question_counts":[5,10,20],"exam_duration_minutes":100,"exam_category_targets":{"TWK":15,"TIU":15,"TKP":15}}'),
+  ('practice', '{"default_question_count":10,"allowed_question_counts":[5,10,20],"low_stock_threshold":10,"exam_duration_minutes":100,"exam_category_targets":{"TWK":15,"TIU":15,"TKP":15}}'),
   ('generation_limits', '{"max_per_click":5,"max_per_day":25,"retry":2}')
 on conflict (key) do update set value = excluded.value, updated_at = now();
 

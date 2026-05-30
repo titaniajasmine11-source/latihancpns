@@ -80,11 +80,12 @@ export async function generateQuestionsWithGemini(prompt: string) {
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
         contents: [
@@ -169,12 +170,25 @@ export function parseAndValidateQuestions({
       if (correctOptions.length !== 1) {
         throw new Error(`Soal ${index + 1}: TWK/TIU harus punya satu jawaban benar`);
       }
+
+      if (question.answer_label !== correctOptions[0].label) {
+        throw new Error(`Soal ${index + 1}: answer_label tidak sesuai opsi benar`);
+      }
+
+      const invalidScore = question.options.some((option) => option.score !== (option.is_correct ? 5 : 0));
+      if (invalidScore) {
+        throw new Error(`Soal ${index + 1}: skor TWK/TIU harus 5 untuk benar dan 0 untuk salah`);
+      }
     }
 
     if (question.category === "TKP") {
       const invalidScore = question.options.some((option) => option.score < 1 || option.score > 5);
       if (invalidScore) {
         throw new Error(`Soal ${index + 1}: skor TKP harus 1 sampai 5`);
+      }
+
+      if (!question.options.some((option) => option.score === 5)) {
+        throw new Error(`Soal ${index + 1}: TKP harus punya minimal satu opsi skor 5`);
       }
     }
 

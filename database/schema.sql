@@ -202,7 +202,8 @@ $$;
 drop policy if exists "Users can read their profile" on profiles;
 create policy "Users can read their profile" on profiles for select using (auth.uid() = id);
 drop policy if exists "Users can update their profile" on profiles;
-create policy "Users can update their profile" on profiles for update using (auth.uid() = id);
+drop policy if exists "Admins can update profiles" on profiles;
+create policy "Admins can update profiles" on profiles for update using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "Authenticated users can read categories" on categories;
 create policy "Authenticated users can read categories" on categories for select to authenticated using (true);
@@ -213,16 +214,18 @@ create policy "Authenticated users can read published questions" on questions fo
 drop policy if exists "Admins can manage questions" on questions;
 create policy "Admins can manage questions" on questions for all using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Authenticated users can read published options" on question_options;
-create policy "Authenticated users can read published options" on question_options for select to authenticated using (
-  exists (select 1 from questions where questions.id = question_options.question_id and questions.status = 'published')
-);
+create policy "Admins can read question options" on question_options for select using (public.is_admin());
 drop policy if exists "Admins can manage question options" on question_options;
 create policy "Admins can manage question options" on question_options for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "Users can manage own sessions" on practice_sessions;
-create policy "Users can manage own sessions" on practice_sessions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Users can read own sessions" on practice_sessions;
+create policy "Users can read own sessions" on practice_sessions for select using (auth.uid() = user_id);
+drop policy if exists "Users can create own sessions" on practice_sessions;
+create policy "Users can create own sessions" on practice_sessions for insert with check (auth.uid() = user_id);
 drop policy if exists "Users can manage own answers" on user_answers;
-create policy "Users can manage own answers" on user_answers for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Users can read own answers" on user_answers;
+create policy "Users can read own answers" on user_answers for select using (auth.uid() = user_id);
 drop policy if exists "Users can read own session questions" on session_questions;
 create policy "Users can read own session questions" on session_questions for select using (
   exists (
@@ -232,20 +235,301 @@ create policy "Users can read own session questions" on session_questions for se
   )
 );
 drop policy if exists "Users can create own session questions" on session_questions;
-create policy "Users can create own session questions" on session_questions for insert with check (
-  exists (
-    select 1 from practice_sessions
-    where practice_sessions.id = session_questions.session_id
-      and practice_sessions.user_id = auth.uid()
-      and practice_sessions.status = 'ongoing'
-  )
-);
 drop policy if exists "Users can read own scores" on score_results;
 create policy "Users can read own scores" on score_results for select using (auth.uid() = user_id);
-drop policy if exists "Users can create own scores" on score_results;
-create policy "Users can create own scores" on score_results for insert with check (auth.uid() = user_id);
-drop policy if exists "Users can update own scores" on score_results;
-create policy "Users can update own scores" on score_results for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Authenticated users can read app settings" on app_settings;
+create policy "Authenticated users can read app settings" on app_settings for select to authenticated using (key in ('practice', 'scoring'));
+
+create or replace function public.get_session_questions_safe(p_session_id uuid)
+returns table (
+  "position" int,
+  question_id bigint,
+  question_text text,
+  options jsonb
+)
+language sql
+security definer set search_path = public
+stable
+as $$
+  select
+    sq.position,
+    q.id as question_id,
+    q.question_text,
+    coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', qo.id,
+          'label', qo.label,
+          'option_text', qo.option_text
+        ) order by qo.label
+      ) filter (where qo.id is not null),
+      '[]'::jsonb
+    ) as options
+  from public.session_questions sq
+  join public.practice_sessions ps on ps.id = sq.session_id
+  join public.questions q on q.id = sq.question_id
+  left join public.question_options qo on qo.question_id = q.id
+  where sq.session_id = p_session_id
+    and ps.user_id = auth.uid()
+    and ps.status = 'ongoing'
+  group by sq.position, q.id, q.question_text
+  order by sq.position;
+$$;
+
+create or replace function public.save_session_answer(
+  p_session_id uuid,
+  p_question_id bigint,
+  p_selected_option_id bigint
+)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_session public.practice_sessions%rowtype;
+  v_option public.question_options%rowtype;
+begin
+  select * into v_session
+  from public.practice_sessions
+  where id = p_session_id
+    and user_id = auth.uid()
+    and status = 'ongoing';
+
+  if not found then
+    raise exception 'Sesi tidak valid atau sudah selesai';
+  end if;
+
+  if v_session.mode = 'exam' and v_session.expires_at is not null and v_session.expires_at <= now() then
+    raise exception 'Waktu ujian sudah habis';
+  end if;
+
+  if not exists (
+    select 1 from public.session_questions
+    where session_id = p_session_id
+      and question_id = p_question_id
+  ) then
+    raise exception 'Soal tidak termasuk sesi ini';
+  end if;
+
+  select * into v_option
+  from public.question_options
+  where id = p_selected_option_id
+    and question_id = p_question_id;
+
+  if not found then
+    raise exception 'Pilihan jawaban tidak valid';
+  end if;
+
+  insert into public.user_answers (
+    session_id,
+    user_id,
+    question_id,
+    selected_option_id,
+    score,
+    answered_at
+  ) values (
+    p_session_id,
+    auth.uid(),
+    p_question_id,
+    p_selected_option_id,
+    v_option.score,
+    now()
+  )
+  on conflict (session_id, question_id)
+  do update set
+    selected_option_id = excluded.selected_option_id,
+    score = excluded.score,
+    answered_at = excluded.answered_at;
+end;
+$$;
+
+create or replace function public.create_practice_session(
+  p_category_id bigint,
+  p_topic_id bigint,
+  p_mode text,
+  p_question_ids bigint[],
+  p_duration_seconds int default null,
+  p_expires_at timestamptz default null
+)
+returns uuid
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_session_id uuid;
+  v_question_id bigint;
+  v_position int := 1;
+begin
+  if auth.uid() is null then
+    raise exception 'Login wajib dilakukan';
+  end if;
+
+  if p_mode not in ('practice', 'exam') then
+    raise exception 'Mode sesi tidak valid';
+  end if;
+
+  if p_question_ids is null or array_length(p_question_ids, 1) is null then
+    raise exception 'Daftar soal kosong';
+  end if;
+
+  insert into public.practice_sessions (
+    user_id,
+    category_id,
+    topic_id,
+    mode,
+    total_questions,
+    duration_seconds,
+    expires_at
+  ) values (
+    auth.uid(),
+    p_category_id,
+    p_topic_id,
+    p_mode,
+    array_length(p_question_ids, 1),
+    p_duration_seconds,
+    p_expires_at
+  ) returning id into v_session_id;
+
+  foreach v_question_id in array p_question_ids loop
+    if not exists (
+      select 1 from public.questions
+      where id = v_question_id
+        and status = 'published'
+    ) then
+      raise exception 'Soal sesi tidak valid';
+    end if;
+
+    insert into public.session_questions (session_id, question_id, position)
+    values (v_session_id, v_question_id, v_position);
+
+    v_position := v_position + 1;
+  end loop;
+
+  return v_session_id;
+end;
+$$;
+
+create or replace function public.finish_session(p_session_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_session public.practice_sessions%rowtype;
+  v_total_score int;
+  v_answered_questions int;
+  v_correct_count int;
+begin
+  select * into v_session
+  from public.practice_sessions
+  where id = p_session_id
+    and user_id = auth.uid();
+
+  if not found then
+    raise exception 'Sesi tidak valid';
+  end if;
+
+  if v_session.status = 'finished' then
+    return;
+  end if;
+
+  select
+    coalesce(sum(ua.score), 0)::int,
+    count(ua.id)::int,
+    count(ua.id) filter (where qo.is_correct)::int
+  into v_total_score, v_answered_questions, v_correct_count
+  from public.user_answers ua
+  left join public.question_options qo on qo.id = ua.selected_option_id
+  where ua.session_id = p_session_id
+    and ua.user_id = auth.uid();
+
+  update public.practice_sessions
+  set status = 'finished', total_score = v_total_score, finished_at = now()
+  where id = p_session_id
+    and user_id = auth.uid()
+    and status = 'ongoing';
+
+  insert into public.score_results (
+    session_id,
+    user_id,
+    category_id,
+    topic_id,
+    total_questions,
+    answered_questions,
+    correct_count,
+    wrong_count,
+    total_score
+  ) values (
+    v_session.id,
+    auth.uid(),
+    v_session.category_id,
+    v_session.topic_id,
+    v_session.total_questions,
+    v_answered_questions,
+    v_correct_count,
+    greatest(v_answered_questions - v_correct_count, 0),
+    v_total_score
+  )
+  on conflict (session_id)
+  do update set
+    answered_questions = excluded.answered_questions,
+    correct_count = excluded.correct_count,
+    wrong_count = excluded.wrong_count,
+    total_score = excluded.total_score;
+end;
+$$;
+
+create or replace function public.get_finished_session_review(p_session_id uuid)
+returns table (
+  "position" int,
+  question_id bigint,
+  question_text text,
+  explanation text,
+  category_code text,
+  topic_name text,
+  options jsonb
+)
+language sql
+security definer set search_path = public
+stable
+as $$
+  select
+    sq.position,
+    q.id as question_id,
+    q.question_text,
+    q.explanation,
+    c.code as category_code,
+    t.name as topic_name,
+    coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', qo.id,
+          'label', qo.label,
+          'option_text', qo.option_text,
+          'is_correct', qo.is_correct,
+          'score', qo.score
+        ) order by qo.label
+      ) filter (where qo.id is not null),
+      '[]'::jsonb
+    ) as options
+  from public.session_questions sq
+  join public.practice_sessions ps on ps.id = sq.session_id
+  join public.questions q on q.id = sq.question_id
+  left join public.categories c on c.id = q.category_id
+  left join public.topics t on t.id = q.topic_id
+  left join public.question_options qo on qo.question_id = q.id
+  where sq.session_id = p_session_id
+    and ps.user_id = auth.uid()
+    and ps.status = 'finished'
+  group by sq.position, q.id, q.question_text, q.explanation, c.code, t.name
+  order by sq.position;
+$$;
+
+grant execute on function public.get_session_questions_safe(uuid) to authenticated;
+grant execute on function public.save_session_answer(uuid, bigint, bigint) to authenticated;
+grant execute on function public.create_practice_session(bigint, bigint, text, bigint[], int, timestamptz) to authenticated;
+grant execute on function public.finish_session(uuid) to authenticated;
+grant execute on function public.get_finished_session_review(uuid) to authenticated;
 
 drop policy if exists "Users can create generation jobs" on generation_jobs;
 create policy "Users can create generation jobs" on generation_jobs for insert to authenticated with check (auth.uid() = created_by);
